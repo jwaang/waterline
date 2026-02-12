@@ -1,0 +1,15 @@
+{
+  "id": "fe5024c1-8aa6-4600-b124-4e5f93f47b5e",
+  "status": "interrupted",
+  "startedAt": "2026-02-12T23:21:14.959Z",
+  "updatedAt": "2026-02-12T23:23:15.543Z",
+  "agentPlugin": "claude",
+  "trackerPlugin": "beads",
+  "epicId": "waterline-a16",
+  "currentIteration": 0,
+  "maxIterations": 10,
+  "totalTasks": 0,
+  "tasksCompleted": 0,
+  "cwd": "/Users/john/Desktop/waterline",
+  "endedAt": "2026-02-12T23:23:15.543Z"
+}
