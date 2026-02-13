@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WidgetKit
 
 @main
 struct WaterlineApp: App {
@@ -80,5 +81,6 @@ struct WaterlineApp: App {
 
         // Reset inactivity timer
         ReminderService.rescheduleInactivityCheck()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 }

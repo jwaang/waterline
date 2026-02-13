@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import SwiftData
+import WidgetKit
 
 /// Handles notification actions (e.g., "Log Water" from time-based reminders).
 /// Set as `UNUserNotificationCenter.current().delegate` at app launch.
@@ -86,5 +87,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
 
         // Reset inactivity timer since user just interacted
         ReminderService.rescheduleInactivityCheck()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 }

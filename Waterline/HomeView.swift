@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import UserNotifications
+import WidgetKit
 
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
@@ -235,6 +236,7 @@ struct HomeView: View {
         checkPerDrinkReminder(for: session)
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Quick Add Buttons
@@ -273,6 +275,7 @@ struct HomeView: View {
                 checkPerDrinkReminder(for: session)
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
+                WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
             }
         }
     }
@@ -292,6 +295,7 @@ struct HomeView: View {
         // Reset inactivity timer on activity
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -401,6 +405,7 @@ struct HomeView: View {
 
         // Background Convex sync
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
 
         // Live Activity — handled in US-032
     }

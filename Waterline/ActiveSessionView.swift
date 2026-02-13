@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import Combine
 import UserNotifications
+import WidgetKit
 
 struct ActiveSessionView: View {
     let sessionId: UUID
@@ -202,6 +203,7 @@ struct ActiveSessionView: View {
         }
         try? modelContext.save()
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Waterline Computation
@@ -283,6 +285,7 @@ struct ActiveSessionView: View {
         checkPerDrinkReminder(for: session)
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Quick Add Buttons
@@ -321,6 +324,7 @@ struct ActiveSessionView: View {
                 checkPerDrinkReminder(for: session)
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
+                WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
             }
         }
     }
@@ -340,6 +344,7 @@ struct ActiveSessionView: View {
         // Reset inactivity timer on activity
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Per-Drink Water Reminder

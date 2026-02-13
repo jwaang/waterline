@@ -51,6 +51,9 @@ targets:
       - path: WaterlineWidgets
         excludes:
           - "Info.plist"
+      - path: Waterline/Models.swift
+      - path: WaterlineIntents/LogDrinkIntent.swift
+      - path: WaterlineIntents/LogWaterIntent.swift
     info:
       path: WaterlineWidgets/Info.plist
       properties:
@@ -71,6 +74,7 @@ targets:
       - path: WaterlineIntents
         excludes:
           - "Info.plist"
+      - path: Waterline/Models.swift
     info:
       path: WaterlineIntents/Info.plist
       properties:

@@ -91,6 +91,16 @@ after each iteration and it's included in prompts for context.
 - `NotificationDelegate.willPresent` forwards only time-based recurring reminders to watch (identified by `reminderIdentifierPrefix`) — per-drink/pacing forward at schedule time
 - `WKInterfaceDevice.current().play(.notification)` for gentle haptic on watch when reminder received
 
+### WidgetKit + App Intents Pattern (WaterlineWidgets / WaterlineIntents)
+- Widget and Intents extensions need `Models.swift` shared via `project.yml` source entries: `- path: Waterline/Models.swift`
+- App Intent structs (`LogDrinkIntent`, `LogWaterIntent`) compiled into both the intents extension AND widget target — widget needs them for `Button(intent:)` interactive buttons
+- Widget timeline provider creates its own `ModelContainer` + `ModelContext` to read SwiftData (same default store as main app, no App Groups needed without code signing)
+- `WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")` called from every data mutation in main app (log water, log drink, log preset, delete entry, start session, watch handler, notification handler)
+- Lock Screen uses three accessory families: `.accessoryCircular` (gauge), `.accessoryRectangular` (gauge + counts), `.accessoryInline` (text-only summary)
+- `WaterlineTimelineEntry` carries snapshot data (`hasActiveSession`, `waterlineValue`, `drinkCount`, `waterCount`, `isWarning`) — widget doesn't hold live state
+- Interactive widget buttons use `Button(intent: LogDrinkIntent())` / `Button(intent: LogWaterIntent())` — iOS 17+ App Intents interactivity
+- Timeline refresh policy: `.after(nextUpdate)` with 15-minute interval, plus explicit reload on every mutation
+
 ---
 
 ## Feb 12, 2026 - US-003
@@ -530,5 +540,38 @@ after each iteration and it's included in prompts for context.
   - iOS WCSessionDelegate requires `sessionDidBecomeInactive` and `sessionDidDeactivate` (mandatory on iOS, not on watchOS) — the deactivate handler should call `session.activate()` for multi-watch support
   - Adding watch target as dependency of iOS target in project.yml causes build failures if watchOS SDK simulator isn't installed — keep them as independent targets with separate schemes
   - Centralizing per-drink reminder scheduling in `ReminderService.schedulePerDrinkReminder()` (instead of duplicating in both views) is cleaner and ensures consistent watch forwarding from a single code path
+---
+
+## 2026-02-13 - US-030
+- What was implemented:
+  - Lock Screen widget with three accessory families: `.accessoryCircular` (circular gauge showing waterline value with color tint), `.accessoryRectangular` (linear gauge + waterline value + drink/water counts), `.accessoryInline` (text summary "WL 1.5 | 3D 1W")
+  - `WaterlineTimelineProvider` upgraded: reads from SwiftData via own `ModelContainer`/`ModelContext`, fetches active session and computes waterline value, drink count, water count, and warning state
+  - `WaterlineTimelineEntry` expanded with `hasActiveSession`, `waterlineValue`, `drinkCount`, `waterCount`, `isWarning` fields plus `.noSession` and `.placeholder` static factories
+  - "No Session" state displayed across all widget families when no active session exists
+  - Interactive buttons on system small widget: `Button(intent: LogDrinkIntent())` and `Button(intent: LogWaterIntent())` via iOS 17+ App Intents
+  - `LogDrinkIntent` implemented: creates a standard drink (beer, 12oz, 1.0 std) LogEntry with `.widget` source in active session
+  - `LogWaterIntent` implemented: creates a water LogEntry with user's default amount and `.widget` source in active session
+  - Both intents trigger `WidgetCenter.shared.reloadTimelines(ofKind:)` after logging
+  - `WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")` added to every data mutation point in the main app: HomeView (logPreset, logWater, startSession, LogDrinkView callback), ActiveSessionView (logPreset, logWater, deleteEntries, LogDrinkView callback), WaterlineApp (handleWatchLogWater), NotificationDelegate (logWaterFromNotification)
+  - `project.yml` updated: `Models.swift` shared as source entry in both WaterlineWidgets and WaterlineIntents targets; `LogDrinkIntent.swift` and `LogWaterIntent.swift` shared into WaterlineWidgets target for `Button(intent:)` compilation
+  - Widget previews added for all families (circular, rectangular, inline, system small) in both active and no-session states
+- Files changed:
+  - `WaterlineWidgets/WaterlineWidgets.swift` (rewritten — accessory family views, system small view, interactive buttons, entry view dispatcher, previews)
+  - `WaterlineWidgets/WaterlineTimelineProvider.swift` (rewritten — SwiftData integration, session state fetching, expanded timeline entry)
+  - `WaterlineIntents/LogDrinkIntent.swift` (modified — implemented with SwiftData + WidgetCenter reload)
+  - `WaterlineIntents/LogWaterIntent.swift` (modified — implemented with SwiftData + WidgetCenter reload)
+  - `Waterline/HomeView.swift` (modified — added WidgetKit import, reloadTimelines after all mutations)
+  - `Waterline/ActiveSessionView.swift` (modified — added WidgetKit import, reloadTimelines after all mutations)
+  - `Waterline/WaterlineApp.swift` (modified — added WidgetKit import, reloadTimelines in handleWatchLogWater)
+  - `Waterline/NotificationDelegate.swift` (modified — added WidgetKit import, reloadTimelines in logWaterFromNotification)
+  - `project.yml` (modified — shared Models.swift and intent files across widget/intents targets)
+- **Learnings:**
+  - WidgetKit extensions run in a separate process and can't share compiled `@Model` types unless the source files are explicitly added to the extension target's sources in `project.yml` — adding `- path: Waterline/Models.swift` to both widget and intents targets resolves all "cannot find type" errors
+  - App Intents used in `Button(intent:)` within widgets must be compiled into the widget target, not just the intents extension — the intent struct definitions (LogDrinkIntent, LogWaterIntent) need to be shared as source entries in the widget target
+  - Widget timeline provider creates its own `ModelContainer` and `ModelContext` — it cannot share the main app's container since it runs in a different process. Without App Groups (code signing disabled), it accesses the same default SwiftData store location because it shares the same bundle ID prefix
+  - `WidgetCenter.shared.reloadTimelines(ofKind:)` must be called from every data mutation touchpoint in the main app to keep widget data fresh — this includes views, notification handlers, and watch handlers
+  - Lock Screen accessory widgets are very space-constrained: `.accessoryCircular` fits only a gauge, `.accessoryRectangular` fits a gauge + 2 lines of text, `.accessoryInline` is single-line text only
+  - `Gauge` with `.accessoryCircular` and `.accessoryLinear` styles are the native WidgetKit patterns for Lock Screen indicators — more appropriate than custom `GeometryReader` shapes used in the main app's `WaterlineIndicator`
+  - `containerBackground(.fill.tertiary, for: .widget)` is only needed for system family widgets, not accessory family widgets (Lock Screen widgets handle their own backgrounds)
 ---
 
