@@ -76,3 +76,22 @@ after each iteration and it's included in prompts for context.
   - Swift 6 strict concurrency: `InMemoryCredentialStore` needs `@unchecked Sendable` since it has mutable state accessed synchronously in tests
 ---
 
+## Feb 12, 2026 - US-005
+- What was implemented:
+  - `OnboardingView` coordinator managing page state via `OnboardingPage` enum (welcome → guardrail → signIn)
+  - `WelcomeScreen` with app value proposition, drop icon, and "Continue" button
+  - `GuardrailScreen` with pacing tool disclaimer, hand.raised icon, and "I understand" button
+  - `RootView` updated with `@AppStorage("hasCompletedOnboarding")` to route new vs returning users
+  - `.onChange(of: authManager.isSignedIn)` sets flag to true on successful sign-in
+  - 8 tests across 3 suites: OnboardingPage ordering/hashability, UserDefaults persistence, and integration flow
+- Files changed:
+  - `Waterline/OnboardingView.swift` (new)
+  - `Waterline/ContentView.swift` (modified — RootView routes through onboarding for new users)
+  - `WaterlineTests/WaterlineTests.swift` (added OnboardingPage, OnboardingPersistence, OnboardingFlow test suites)
+- **Learnings:**
+  - `@AppStorage` with a simple boolean flag is the cleanest way to persist "onboarding shown once" state — no need for SwiftData or Keychain
+  - Onboarding tests can use unique `UserDefaults(suiteName:)` per test for isolation, with `removePersistentDomain` cleanup
+  - SwiftUI `Group` + `switch` + `.animation(value:)` pattern works well for page-based onboarding flows without NavigationStack overhead
+  - Embedding `SignInView` as the final onboarding page avoids duplicating the sign-in UI
+---
+

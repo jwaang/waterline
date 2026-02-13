@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     let authManager: AuthenticationManager
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
         Group {
@@ -9,12 +10,21 @@ struct RootView: View {
             case .unknown:
                 ProgressView()
             case .signedOut:
-                SignInView(authManager: authManager)
+                if hasCompletedOnboarding {
+                    SignInView(authManager: authManager)
+                } else {
+                    OnboardingView(authManager: authManager)
+                }
             case .signedIn:
                 ContentView()
             }
         }
         .animation(.default, value: authManager.authState)
+        .onChange(of: authManager.isSignedIn) { _, isSignedIn in
+            if isSignedIn {
+                hasCompletedOnboarding = true
+            }
+        }
     }
 }
 

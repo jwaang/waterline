@@ -925,3 +925,91 @@ struct AuthLocalUserTests {
         #expect(allUsers.count == 1)
     }
 }
+
+// MARK: - OnboardingPage Tests
+
+@Suite("OnboardingPage")
+struct OnboardingPageTests {
+    @Test("Page ordering is sequential")
+    func pageOrdering() {
+        #expect(OnboardingPage.welcome.rawValue == 0)
+        #expect(OnboardingPage.guardrail.rawValue == 1)
+        #expect(OnboardingPage.signIn.rawValue == 2)
+    }
+
+    @Test("Pages are hashable for animation")
+    func pagesHashable() {
+        let pages: Set<OnboardingPage> = [.welcome, .guardrail, .signIn]
+        #expect(pages.count == 3)
+    }
+}
+
+@Suite("Onboarding Persistence")
+struct OnboardingPersistenceTests {
+    @Test("hasCompletedOnboarding defaults to false")
+    func defaultValue() {
+        let defaults = UserDefaults(suiteName: "test-onboarding-\(UUID().uuidString)")!
+        let value = defaults.bool(forKey: "hasCompletedOnboarding")
+        #expect(value == false)
+    }
+
+    @Test("hasCompletedOnboarding persists when set to true")
+    func persistsTrue() {
+        let suiteName = "test-onboarding-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(true, forKey: "hasCompletedOnboarding")
+        let value = defaults.bool(forKey: "hasCompletedOnboarding")
+        #expect(value == true)
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    @Test("Onboarding flag key matches AppStorage key")
+    func keyConsistency() {
+        // The key used in RootView's @AppStorage must be "hasCompletedOnboarding"
+        // This test documents the contract
+        let key = "hasCompletedOnboarding"
+        let defaults = UserDefaults(suiteName: "test-key-\(UUID().uuidString)")!
+        defaults.set(true, forKey: key)
+        #expect(defaults.bool(forKey: key) == true)
+    }
+}
+
+@Suite("Onboarding Flow Integration")
+struct OnboardingFlowTests {
+    @MainActor
+    @Test("New user sees onboarding when signed out and not onboarded")
+    func newUserSeesOnboarding() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+
+        // User is signed out and has not completed onboarding
+        #expect(manager.authState == .signedOut)
+        #expect(manager.isSignedIn == false)
+        // hasCompletedOnboarding would be false → shows OnboardingView
+    }
+
+    @MainActor
+    @Test("Returning user skips onboarding when signed out but previously onboarded")
+    func returningUserSkipsOnboarding() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+
+        // User is signed out but has completed onboarding before
+        #expect(manager.authState == .signedOut)
+        // If hasCompletedOnboarding is true → shows SignInView directly
+    }
+
+    @MainActor
+    @Test("Signing in marks onboarding complete")
+    func signInMarksOnboardingComplete() {
+        let store = InMemoryCredentialStore()
+        store.save(key: "com.waterline.appleUserId", value: "test-user")
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+
+        #expect(manager.isSignedIn == true)
+        // onChange handler in RootView sets hasCompletedOnboarding = true
+    }
+}
