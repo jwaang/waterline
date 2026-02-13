@@ -15,6 +15,7 @@ struct ActiveSessionView: View {
 
     @State private var now = Date()
     @State private var showingDrinkSheet = false
+    @State private var showingEndConfirmation = false
     @State private var entryToEdit: LogEntry?
 
     private var session: Session? { sessions.first }
@@ -67,12 +68,127 @@ struct ActiveSessionView: View {
             quickAddButtons(for: session)
 
             logTimeline(for: session)
+
+            endSessionButton
         }
         .padding(.horizontal, 24)
         .sheet(item: $entryToEdit) { entry in
             EditLogEntryView(entry: entry)
         }
+        .confirmationDialog("End this session?", isPresented: $showingEndConfirmation, titleVisibility: .visible) {
+            Button("End Session", role: .destructive) {
+                endSession(session)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
+
+    // MARK: - End Session
+
+    private var endSessionButton: some View {
+        Button(role: .destructive) {
+            showingEndConfirmation = true
+        } label: {
+            Label("End Session", systemImage: "stop.circle")
+                .font(.subheadline.weight(.medium))
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.bordered)
+        .tint(.red)
+        .padding(.top, 8)
+    }
+
+    private func endSession(_ session: Session) {
+        // Set endTime and deactivate
+        session.endTime = Date()
+        session.isActive = false
+
+        // Compute and store summary
+        computeSummary(for: session)
+
+        // Cancel all active reminders
+        ReminderService.cancelAllTimeReminders()
+
+        // End Live Activity — handled in US-032
+
+        // Sync to Convex — fire-and-forget
+        Task.detached { @Sendable in
+            // Placeholder for Convex sync — will be wired in US-026
+        }
+
+        try? modelContext.save()
+    }
+
+    private func computeSummary(for session: Session) {
+        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+
+        let totalDrinks = entries.filter { $0.type == .alcohol }.count
+        let totalWater = entries.filter { $0.type == .water }.count
+        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
+
+        let duration: TimeInterval
+        if let endTime = session.endTime {
+            duration = endTime.timeIntervalSince(session.startTime)
+        } else {
+            duration = Date().timeIntervalSince(session.startTime)
+        }
+
+        // Pacing adherence: % of times water was logged within the N-drink rule
+        // Walk through entries in order, tracking "opportunities" where water was due
+        // and how many times the user actually logged water before exceeding the threshold
+        let waterEveryN = userSettings.waterEveryNDrinks
+        let adherence = computePacingAdherence(entries: entries, waterEveryN: waterEveryN)
+
+        var wlValue: Double = 0
+        for entry in entries {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                wlValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                wlValue -= 1
+            }
+        }
+
+        session.computedSummary = SessionSummary(
+            totalDrinks: totalDrinks,
+            totalWater: totalWater,
+            totalStandardDrinks: totalStdDrinks,
+            durationSeconds: duration,
+            pacingAdherence: adherence,
+            finalWaterlineValue: wlValue
+        )
+    }
+
+    /// Computes pacing adherence as the percentage of N-drink intervals where the user
+    /// logged water before exceeding the threshold.
+    /// For each group of N consecutive alcoholic drinks, if water was logged before the
+    /// next drink group started, that counts as adherent. Returns 1.0 if no drinks or no
+    /// expected water breaks.
+    private func computePacingAdherence(entries: [LogEntry], waterEveryN: Int) -> Double {
+        var drinksSinceWater = 0
+        var waterDueCount = 0
+        var waterLoggedCount = 0
+
+        for entry in entries {
+            if entry.type == .alcohol {
+                drinksSinceWater += 1
+                if drinksSinceWater >= waterEveryN {
+                    waterDueCount += 1
+                    drinksSinceWater = 0
+                }
+            } else if entry.type == .water {
+                if waterDueCount > waterLoggedCount {
+                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
+                }
+                drinksSinceWater = 0
+            }
+        }
+
+        guard waterDueCount > 0 else { return 1.0 }
+        return Double(waterLoggedCount) / Double(waterDueCount)
+    }
+
+    // MARK: - Counts
 
     private func countsSection(for session: Session) -> some View {
         HStack(spacing: 32) {

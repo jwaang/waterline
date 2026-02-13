@@ -61,6 +61,12 @@ after each iteration and it's included in prompts for context.
 - Reuses `WATER_REMINDER` category — no separate category needed for pacing warnings
 - `LogDrinkView.onLogged` signature is `(Double) -> Void` — passes `adjustedEstimate` for downstream threshold checks
 
+### End Session Pattern (ActiveSessionView.swift)
+- `endSession()` sets `endTime`, `isActive = false`, computes `SessionSummary`, calls `ReminderService.cancelAllTimeReminders()`, saves to SwiftData
+- Navigation to Summary is automatic: `HomeView.sessionDestination(for:)` router checks `activeSessions` query — when `isActive` changes, SwiftData `@Query` updates, and the same UUID now resolves to `SessionSummaryView` instead of `ActiveSessionView` (in-place content swap)
+- Pacing adherence: walks entries in order, counts N-drink intervals (waterDueCount), tracks water entries fulfilling those intervals (waterLoggedCount), returns `waterLoggedCount / waterDueCount` or `1.0` if no water was due
+- Force-end with zero logs: all computations handle empty arrays — adherence returns 1.0, waterline = 0, counts = 0
+
 ### Auth Pattern (AuthenticationManager.swift)
 - `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
 - Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
@@ -599,5 +605,27 @@ after each iteration and it's included in prompts for context.
   - Custom `Circle().trim(from:to:).stroke()` with `.rotationEffect(.degrees(-90))` creates a cleaner circular progress indicator for medium widgets than the built-in `Gauge(.accessoryCircular)` which is Lock Screen-specific
   - Widget timeline entries should use lightweight snapshot structs (not `@Model` classes) for any data displayed — `LogEntrySnapshot` avoids SwiftData coupling in the widget view layer
   - `SortDescriptor(\Session.startTime, order: .reverse)` in `FetchDescriptor` works in widget extensions for fetching the most recent past session
+---
+
+## 2026-02-13 - US-021
+- What was implemented:
+  - "End Session" button on `ActiveSessionView` with `.confirmationDialog` ("End this session?") — destructive role button + cancel
+  - `endSession()` sets `endTime = Date()`, `isActive = false`, computes full summary, cancels all reminders via `ReminderService.cancelAllTimeReminders()`, saves to SwiftData
+  - `computeSummary()` calculates: total drinks, total water, total standard drinks, session duration, pacing adherence, final waterline value — stored in `Session.computedSummary`
+  - Pacing adherence algorithm: walks entries in timestamp order, counts N-drink intervals where water was due, tracks how many were fulfilled by subsequent water entries — returns % of intervals met
+  - Navigation to Summary: leverages existing `sessionDestination(for:)` router in `HomeView` — when `isActive` becomes `false`, the `@Query` updates and the router returns `SessionSummaryView` instead of `ActiveSessionView` for the same UUID, creating a seamless in-place transition
+  - "Done" toolbar button added to `SessionSummaryView` using `@Environment(\.dismiss)` to pop back to Home
+  - `SessionSummaryView.recomputeSummary()` updated with same pacing adherence algorithm (was previously using a simplified water/drinks ratio)
+  - Live Activity end placeholder (US-032), Convex sync placeholder (US-026) — fire-and-forget
+  - Force-end with zero logs works: all computations handle empty arrays correctly, adherence returns 1.0 (no water breaks were needed)
+- Files changed:
+  - `Waterline/ActiveSessionView.swift` (modified — added `showingEndConfirmation` state, `endSessionButton`, `endSession()`, `computeSummary()`, `computePacingAdherence()`, confirmation dialog)
+  - `Waterline/SessionSummaryView.swift` (modified — added `@Query` for users, `@Environment(\.dismiss)`, "Done" toolbar button, `computePacingAdherence()`, updated `recomputeSummary()`)
+- **Learnings:**
+  - Navigation from ActiveSession → Summary works automatically via the existing `sessionDestination(for:)` router pattern: when `session.isActive` changes to `false`, SwiftData `@Query` in `HomeView` updates `activeSessions`, and the `.navigationDestination(for: UUID.self)` re-evaluates — the same UUID now resolves to `SessionSummaryView` instead of `ActiveSessionView`, creating a seamless in-place content swap without explicit navigation logic
+  - `.confirmationDialog(titleVisibility: .visible)` is needed on iOS to show the title text — by default the title is hidden on iPhone
+  - Pacing adherence formula: for each group of N consecutive alcohol entries, a "water due" event is tallied; if a water entry appears before the next N-drink group, it counts as fulfilled. This is more accurate than the previous `totalWater / totalDrinks` ratio because it respects the timing/ordering of entries
+  - `@Query` properties can be added anywhere in a SwiftUI struct body — they're stored properties like any other, so placing them near their usage (e.g., in the recompute section) works but moving them to the top with other queries is cleaner
+  - `Button(role: .destructive)` with `.buttonStyle(.bordered)` and `.tint(.red)` creates a visually distinct but not overpowering end-session affordance
 ---
 

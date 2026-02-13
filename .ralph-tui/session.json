@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "sessionId": "2d705256-c3af-4e70-a121-0d7ee2f2cf3e",
-  "status": "running",
-  "startedAt": "2026-02-13T04:27:16.554Z",
-  "updatedAt": "2026-02-13T04:47:16.784Z",
-  "currentIteration": 6,
+  "sessionId": "5d8a6054-630e-439b-ae27-85e11f5d45d7",
+  "status": "completed",
+  "startedAt": "2026-02-13T14:25:08.646Z",
+  "updatedAt": "2026-02-13T16:28:14.937Z",
+  "currentIteration": 0,
   "maxIterations": 10,
-  "tasksCompleted": 6,
+  "tasksCompleted": 0,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -84,42 +84,42 @@
         "id": "US-012",
         "title": "Log alcoholic drink — full flow",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-013",
         "title": "Log water",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-014",
         "title": "Quick-add buttons on active session",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-015",
         "title": "Drink presets — create and manage",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-016",
         "title": "Drink presets — default presets on first launch",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-017",
         "title": "Edit and delete log entries",
         "status": "completed",
-        "completedInSession": true
+        "completedInSession": false
       },
       {
         "id": "US-018",
         "title": "Time-based reminders",
-        "status": "open",
+        "status": "completed",
         "completedInSession": false
       },
       {
@@ -232,68 +232,7 @@
       }
     ]
   },
-  "iterations": [
-    {
-      "iteration": 1,
-      "status": "completed",
-      "taskId": "US-012",
-      "taskTitle": "Log alcoholic drink — full flow",
-      "taskCompleted": true,
-      "durationMs": 211037,
-      "startedAt": "2026-02-13T04:27:42.164Z",
-      "endedAt": "2026-02-13T04:31:13.201Z"
-    },
-    {
-      "iteration": 2,
-      "status": "completed",
-      "taskId": "US-013",
-      "taskTitle": "Log water",
-      "taskCompleted": true,
-      "durationMs": 88279,
-      "startedAt": "2026-02-13T04:31:14.339Z",
-      "endedAt": "2026-02-13T04:32:42.618Z"
-    },
-    {
-      "iteration": 3,
-      "status": "completed",
-      "taskId": "US-014",
-      "taskTitle": "Quick-add buttons on active session",
-      "taskCompleted": true,
-      "durationMs": 78710,
-      "startedAt": "2026-02-13T04:32:43.753Z",
-      "endedAt": "2026-02-13T04:34:02.463Z"
-    },
-    {
-      "iteration": 4,
-      "status": "completed",
-      "taskId": "US-015",
-      "taskTitle": "Drink presets — create and manage",
-      "taskCompleted": true,
-      "durationMs": 217093,
-      "startedAt": "2026-02-13T04:34:03.604Z",
-      "endedAt": "2026-02-13T04:37:40.697Z"
-    },
-    {
-      "iteration": 5,
-      "status": "completed",
-      "taskId": "US-016",
-      "taskTitle": "Drink presets — default presets on first launch",
-      "taskCompleted": true,
-      "durationMs": 90599,
-      "startedAt": "2026-02-13T04:37:41.850Z",
-      "endedAt": "2026-02-13T04:39:12.449Z"
-    },
-    {
-      "iteration": 6,
-      "status": "completed",
-      "taskId": "US-017",
-      "taskTitle": "Edit and delete log entries",
-      "taskCompleted": true,
-      "durationMs": 211671,
-      "startedAt": "2026-02-13T04:39:13.587Z",
-      "endedAt": "2026-02-13T04:42:45.258Z"
-    }
-  ],
+  "iterations": [],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [],
