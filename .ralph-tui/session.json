@@ -3,10 +3,10 @@
   "sessionId": "2d705256-c3af-4e70-a121-0d7ee2f2cf3e",
   "status": "running",
   "startedAt": "2026-02-13T04:27:16.554Z",
-  "updatedAt": "2026-02-13T04:32:42.621Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-02-13T04:34:02.466Z",
+  "currentIteration": 2,
   "maxIterations": 10,
-  "tasksCompleted": 1,
+  "tasksCompleted": 2,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -89,8 +89,8 @@
       {
         "id": "US-013",
         "title": "Log water",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-014",
@@ -242,6 +242,16 @@
       "durationMs": 211037,
       "startedAt": "2026-02-13T04:27:42.164Z",
       "endedAt": "2026-02-13T04:31:13.201Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-013",
+      "taskTitle": "Log water",
+      "taskCompleted": true,
+      "durationMs": 88279,
+      "startedAt": "2026-02-13T04:31:14.339Z",
+      "endedAt": "2026-02-13T04:32:42.618Z"
     }
   ],
   "skippedTaskIds": [],

@@ -277,3 +277,17 @@ after each iteration and it's included in prompts for context.
   - The `logWater` function is identical in both views — potential extraction to a shared helper when `WaterlineEngine` is built in US-034
 ---
 
+## 2026-02-12 - US-014
+- What was implemented:
+  - Haptic feedback (`UIImpactFeedbackGenerator(style: .medium)`) added to both "+ Drink" and "+ Water" quick-add buttons in `ActiveSessionView` and `HomeView`
+  - Button sizing updated from `.padding(.vertical, 14)` to `.frame(minHeight: 44)` to explicitly guarantee the 44pt minimum tap target per Apple HIG
+  - All other acceptance criteria (bottom placement, single-tap water logging, sheet-based drink logging) were already implemented in US-012 and US-013
+- Files changed:
+  - `Waterline/ActiveSessionView.swift` (modified — haptic feedback + minHeight on quick-add buttons)
+  - `Waterline/HomeView.swift` (modified — haptic feedback + minHeight on quick-add buttons)
+- **Learnings:**
+  - US-014 was largely a UX polish story — the functional buttons, sheet flow, and positioning were already built in US-008/012/013
+  - `.frame(minHeight: 44)` is more semantically correct than `.padding(.vertical, 14)` for enforcing Apple's minimum tap target — the padding approach depends on font size, while minHeight is an absolute guarantee
+  - `UIImpactFeedbackGenerator(style: .medium)` is appropriate for confirmation actions like logging; `.light` would be too subtle, `.heavy` too aggressive
+---
+

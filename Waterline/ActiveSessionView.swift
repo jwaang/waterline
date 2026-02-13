@@ -172,24 +172,26 @@ struct ActiveSessionView: View {
     private func quickAddButtons(for session: Session) -> some View {
         HStack(spacing: 16) {
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 showingDrinkSheet = true
             } label: {
                 Label("Drink", systemImage: "wineglass")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .frame(minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
             .tint(.orange)
             .accessibilityLabel("Add Drink")
 
             Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 logWater(for: session)
             } label: {
                 Label("Water", systemImage: "drop.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .frame(minHeight: 44)
             }
             .buttonStyle(.borderedProminent)
             .tint(.blue)
