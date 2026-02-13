@@ -11,6 +11,11 @@ defaultAgent = "claude"
 [notifications]
 sound = "system"
 
+[parallel]
+mode = "auto"                           # auto | always | never
+maxWorkers = 1                          # Maximum concurrent workers
+directMerge = true                     # Merge directly to current branch (vs session branch)
+
 agent = "claude"
 fallbackAgents = ["codex"]
  
