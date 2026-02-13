@@ -5,9 +5,13 @@ struct SessionSummaryView: View {
     let sessionId: UUID
 
     @Query private var sessions: [Session]
+    @Query private var users: [User]
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
 
     @State private var entryToEdit: LogEntry?
+
+    private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
 
     init(sessionId: UUID) {
         self.sessionId = sessionId
@@ -28,6 +32,13 @@ struct SessionSummaryView: View {
         }
         .navigationTitle("Session Summary")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") {
+                    dismiss()
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -54,12 +65,9 @@ struct SessionSummaryView: View {
             LabeledContent("Duration", value: durationText(for: session))
             LabeledContent("Drinks", value: "\(drinkCount(for: session))")
             LabeledContent("Standard Drinks", value: String(format: "%.1f", totalStandardDrinks(for: session)))
-            LabeledContent("Water", value: "\(waterCount(for: session))")
+            LabeledContent("Water", value: "\(waterCount(for: session)) (\(totalWaterVolume(for: session)) oz)")
 
-            if let summary = session.computedSummary {
-                LabeledContent("Pacing Adherence", value: String(format: "%.0f%%", summary.pacingAdherence * 100))
-            }
-
+            LabeledContent("Pacing Adherence", value: String(format: "%.0f%%", computePacingAdherence(for: session) * 100))
             LabeledContent("Final Waterline", value: String(format: "%.1f", waterlineValue(for: session)))
         }
     }
@@ -114,10 +122,7 @@ struct SessionSummaryView: View {
             duration = Date().timeIntervalSince(session.startTime)
         }
 
-        // Pacing adherence: % of times water was logged within the N-drink rule
-        // Simplified: count water entries / expected water entries
-        let expectedWaters = totalDrinks > 0 ? max(totalDrinks, 1) : 0
-        let adherence = expectedWaters > 0 ? min(Double(totalWater) / Double(expectedWaters), 1.0) : 1.0
+        let adherence = computePacingAdherence(for: session)
 
         var wlValue: Double = 0
         for entry in entries {
@@ -163,6 +168,40 @@ struct SessionSummaryView: View {
 
     private func totalStandardDrinks(for session: Session) -> Double {
         session.logEntries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
+    }
+
+    private func totalWaterVolume(for session: Session) -> Int {
+        Int(session.logEntries.filter { $0.type == .water }.compactMap { $0.waterMeta?.amountOz }.reduce(0, +))
+    }
+
+    /// Chunk-based pacing adherence: walks entries in order, tracking groups of N drinks.
+    /// When drinksSinceWater reaches waterEveryN, a water opportunity is due.
+    /// Water entries logged when there are outstanding opportunities count as adherence.
+    private func computePacingAdherence(for session: Session) -> Double {
+        let waterEveryN = userSettings.waterEveryNDrinks
+        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+
+        var waterDueCount = 0
+        var waterLoggedCount = 0
+        var drinksSinceWater = 0
+
+        for entry in entries {
+            if entry.type == .alcohol {
+                drinksSinceWater += 1
+                if drinksSinceWater >= waterEveryN {
+                    waterDueCount += 1
+                    drinksSinceWater = 0
+                }
+            } else if entry.type == .water {
+                if waterDueCount > waterLoggedCount {
+                    waterLoggedCount += 1
+                }
+                drinksSinceWater = 0
+            }
+        }
+
+        guard waterDueCount > 0 else { return 1.0 }
+        return min(Double(waterLoggedCount) / Double(waterDueCount), 1.0)
     }
 
     private func durationText(for session: Session) -> String {

@@ -408,3 +408,22 @@ after each iteration and it's included in prompts for context.
   - Using unique `UUID().uuidString` suffixed identifiers for pacing warning notifications prevents the system from deduplicating multiple warnings across different sessions
 ---
 
+## 2026-02-13 - US-022
+- What was implemented:
+  - SessionSummaryView upgraded with complete acceptance criteria: total alcoholic drinks (count + standard drink total), total water entries (count + total volume in oz), session duration, pacing adherence percentage, final waterline value
+  - Pacing adherence algorithm fixed: replaced simplified `totalWater / totalDrinks` with chunk-based N-drink rule algorithm that walks entries in timestamp order, tracking drink groups of size N and counting water opportunities logged vs due
+  - Pacing adherence now always displayed (live-computed from entries) rather than only when `computedSummary` exists — consistent display whether session was ended properly or not
+  - `@Query private var users: [User]` added to read `waterEveryNDrinks` from user settings for pacing adherence calculation
+  - Total water volume display: "3 (24 oz)" format showing both count and cumulative oz
+  - "Done" toolbar button added using `@Environment(\.dismiss)` to pop back to HomeView
+  - `recomputeSummary()` now uses the same chunk-based `computePacingAdherence()` method for consistency
+  - Timeline list with chronological entries, edit/delete with summary recomputation — all pre-existing from US-017
+- Files changed:
+  - `Waterline/SessionSummaryView.swift` (modified — added users query, dismiss environment, water volume, chunk-based pacing, Done button)
+- **Learnings:**
+  - The original pacing adherence calculation (`totalWater / expectedWaters`) was a rough approximation that didn't match the PRD's "percentage of times water was logged within the N-drink rule" — the chunk-based algorithm properly tracks drink groups and water opportunities
+  - `@Environment(\.dismiss)` with a toolbar "Done" button is the standard SwiftUI pattern for returning from a detail view pushed onto a NavigationStack — it pops the view off the stack
+  - Computing pacing adherence live from entries (rather than only from `computedSummary`) ensures the value is always visible, even for sessions that were ended without proper summary computation
+  - Adding `@Query private var users: [User]` follows the established codebase pattern (used in ActiveSessionView, HomeView) for accessing user settings from any view
+---
+
