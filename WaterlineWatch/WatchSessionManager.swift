@@ -3,8 +3,8 @@ import WatchConnectivity
 import WatchKit
 
 /// Manages WatchConnectivity on the watchOS side.
-/// Receives water reminders from the phone and plays haptic.
-/// Sends log water commands back to the phone.
+/// Receives session state, presets, and water reminders from the phone.
+/// Sends log water, log drink, and start session commands back to the phone.
 @MainActor
 final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable {
 
@@ -15,12 +15,22 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
     @Published var waterCount: Int = 0
     @Published var isSessionActive: Bool = false
     @Published var pendingReminder: WaterReminder?
+    @Published var presets: [WatchPreset] = []
 
     struct WaterReminder: Identifiable {
         let id = UUID()
         let title: String
         let body: String
         let receivedAt: Date
+    }
+
+    /// Lightweight preset representation for the watch (no SwiftData dependency).
+    struct WatchPreset: Identifiable {
+        let id = UUID()
+        let name: String
+        let drinkType: String
+        let sizeOz: Double
+        let standardDrinkEstimate: Double
     }
 
     private var wcSession: WCSession?
@@ -36,7 +46,7 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
 
     // MARK: - Send Commands to Phone
 
-    /// Sends a "log water" command to the phone.
+    /// Sends a "log water" command to the phone with haptic confirmation.
     func sendLogWaterCommand() {
         guard let session = wcSession, session.isReachable else { return }
         let message: [String: Any] = [
@@ -44,6 +54,33 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
             "timestamp": Date().timeIntervalSince1970,
         ]
         session.sendMessage(message, replyHandler: nil)
+        WKInterfaceDevice.current().play(.click)
+    }
+
+    /// Sends a "log drink" command to the phone with preset data and haptic confirmation.
+    func sendLogDrinkCommand(preset: WatchPreset) {
+        guard let session = wcSession, session.isReachable else { return }
+        let message: [String: Any] = [
+            "type": "logDrink",
+            "presetName": preset.name,
+            "drinkType": preset.drinkType,
+            "sizeOz": preset.sizeOz,
+            "standardDrinkEstimate": preset.standardDrinkEstimate,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        session.sendMessage(message, replyHandler: nil)
+        WKInterfaceDevice.current().play(.click)
+    }
+
+    /// Sends a "start session" command to the phone with haptic confirmation.
+    func sendStartSessionCommand() {
+        guard let session = wcSession, session.isReachable else { return }
+        let message: [String: Any] = [
+            "type": "startSession",
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        session.sendMessage(message, replyHandler: nil)
+        WKInterfaceDevice.current().play(.success)
     }
 
     // MARK: - Handle Incoming Data
@@ -59,6 +96,9 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
 
         case "sessionState":
             handleSessionState(data)
+
+        case "presets":
+            handlePresets(data)
 
         default:
             break
@@ -92,6 +132,23 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
         }
     }
 
+    private func handlePresets(_ data: [String: Any]) {
+        guard let presetDicts = data["presets"] as? [[String: Any]] else { return }
+        presets = presetDicts.compactMap { dict in
+            guard let name = dict["name"] as? String,
+                  let drinkType = dict["drinkType"] as? String,
+                  let sizeOz = dict["sizeOz"] as? Double,
+                  let estimate = dict["standardDrinkEstimate"] as? Double
+            else { return nil }
+            return WatchPreset(
+                name: name,
+                drinkType: drinkType,
+                sizeOz: sizeOz,
+                standardDrinkEstimate: estimate
+            )
+        }
+    }
+
     /// Dismisses the current pending reminder.
     func dismissReminder() {
         pendingReminder = nil
@@ -111,20 +168,26 @@ extension WatchSessionManager: WCSessionDelegate {
         if activationState == .activated {
             let context = session.receivedApplicationContext
             if !context.isEmpty {
+                let data = Self.encodeMessage(context)
                 Task { @MainActor in
-                    self.handleMessage(context)
+                    if let decoded = Self.decodeMessage(data) {
+                        self.handleMessage(decoded)
+                    }
                 }
             }
         }
     }
 
-    /// Receives real-time messages from phone (water reminders when reachable).
+    /// Receives real-time messages from phone (water reminders, presets when reachable).
     nonisolated func session(
         _ session: WCSession,
         didReceiveMessage message: [String: Any]
     ) {
+        let data = Self.encodeMessage(message)
         Task { @MainActor in
-            self.handleMessage(message)
+            if let decoded = Self.decodeMessage(data) {
+                self.handleMessage(decoded)
+            }
         }
     }
 
@@ -133,18 +196,36 @@ extension WatchSessionManager: WCSessionDelegate {
         _ session: WCSession,
         didReceiveApplicationContext applicationContext: [String: Any]
     ) {
+        let data = Self.encodeMessage(applicationContext)
         Task { @MainActor in
-            self.handleMessage(applicationContext)
+            if let decoded = Self.decodeMessage(data) {
+                self.handleMessage(decoded)
+            }
         }
     }
 
-    /// Receives transferred user info (water reminders sent when watch was not reachable).
+    /// Receives transferred user info (water reminders or presets sent when watch was not reachable).
     nonisolated func session(
         _ session: WCSession,
         didReceiveUserInfo userInfo: [String: Any] = [:]
     ) {
+        let data = Self.encodeMessage(userInfo)
         Task { @MainActor in
-            self.handleMessage(userInfo)
+            if let decoded = Self.decodeMessage(data) {
+                self.handleMessage(decoded)
+            }
         }
+    }
+
+    // MARK: - Sendable Bridge
+
+    /// Encodes a dictionary to JSON Data (Sendable) for safe cross-isolation transfer.
+    private nonisolated static func encodeMessage(_ dict: [String: Any]) -> Data {
+        (try? JSONSerialization.data(withJSONObject: dict)) ?? Data()
+    }
+
+    /// Decodes JSON Data back to a dictionary.
+    private nonisolated static func decodeMessage(_ data: Data) -> [String: Any]? {
+        try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 }

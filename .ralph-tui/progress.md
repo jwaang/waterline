@@ -11,6 +11,8 @@ after each iteration and it's included in prompts for context.
 - **Navigation routing**: HomeView uses `navigationDestination(for: UUID.self)` to route to either `ActiveSessionView` (if session is active) or `SessionSummaryView` (if ended).
 - **SettingsView** requires both `authManager` and `syncService` parameters. Settings changes save to SwiftData immediately and trigger Convex sync via `syncService.triggerSync()`.
 - **Sync architecture**: Offline-first with `needsSync` flags on all models. SyncService uses NWPathMonitor for connectivity, auto-syncs on reconnection. All writes go to SwiftData first, then `triggerSync()`. When modifying already-synced records (e.g., ending a session), must re-set `needsSync = true` before saving.
+- **WatchConnectivity protocol**: Phone→watch uses `updateApplicationContext` (session state) and `sendMessage`/`transferUserInfo` (presets, reminders). Watch→phone uses `sendMessage` for commands (logWater, logDrink, startSession). Watch has no SwiftData — receives precomputed state and lightweight preset dicts. All watch commands are handled in `WaterlineApp` static methods which create SwiftData entries and call `sendWatchUpdate()` to push refreshed state back.
+- **Swift 6 concurrency + WCSessionDelegate**: `[String: Any]` dicts from WCSession delegate methods are not `Sendable`. Bridge via `JSONSerialization.data`→`Data` (Sendable)→decode on MainActor. Don't use `as! Sendable` or `as Sendable` casts.
 
 ---
 
@@ -50,4 +52,22 @@ after each iteration and it's included in prompts for context.
 - **Learnings:**
   - When modifying an already-synced record (e.g., setting `session.isActive = false`), you must explicitly set `needsSync = true` again — SwiftData property changes don't auto-reset custom sync flags
   - The sync architecture is well-designed: `SyncService` handles sessions first (dependency ordering), then log entries, then presets, with per-item error tolerance and retry on next cycle
+---
+
+## Feb 13, 2026 - US-027
+- Implemented Apple Watch main screen with full quick-logging capability
+- Watch active session view: compact Waterline gauge + drink/water counts + "+ Drink" and "+ Water" buttons
+- "+ Water" immediately sends `logWater` command to phone via WatchConnectivity
+- "+ Drink" opens preset picker sheet (shows user presets from phone, or fallback defaults: Beer, Wine, Shot, Cocktail, Double)
+- No active session state: shows "Start Session" button that creates a session on the phone
+- Haptic confirmation: `.click` on log actions, `.success` on session start, `.notification` on water reminders
+- Phone sends session state via `updateApplicationContext` and presets via `sendMessage`/`transferUserInfo` after every watch command
+- New `handleWatchLogDrink` handler creates alcohol LogEntry with preset metadata, checks per-drink + pacing warnings
+- New `handleWatchStartSession` handler creates Session, schedules reminders, associates with user
+- Files changed: `WaterlineWatch/WatchContentView.swift`, `WaterlineWatch/WatchSessionManager.swift`, `Waterline/WatchConnectivityManager.swift`, `Waterline/WaterlineApp.swift`
+- **Learnings:**
+  - WatchConnectivity `[String: Any]` dicts are not `Sendable` in Swift 6 strict concurrency. Cannot cast `Any` to `Sendable`. Solution: serialize to `Data` via `JSONSerialization` (which is `Sendable`) then deserialize on the MainActor side.
+  - `sendSessionState` was defined but never called — the watch was a display-only shell. Watch state updates must be explicitly pushed after every data mutation (both watch-originated and phone-originated commands).
+  - Watch app doesn't share SwiftData models — it uses lightweight `WatchPreset` structs deserialized from dictionaries. Keep watch-side data structures minimal and independent.
+  - Default drink presets are hardcoded as fallback in WatchContentView for when phone hasn't synced presets yet (e.g., first launch or watch not reachable).
 ---

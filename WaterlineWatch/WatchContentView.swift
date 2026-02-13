@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WatchContentView: View {
     @ObservedObject var sessionManager: WatchSessionManager
+    @State private var showingDrinkPicker = false
 
     var body: some View {
         ZStack {
@@ -50,7 +51,13 @@ struct WatchContentView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                // Quick-add buttons
+                quickAddButtons
             }
+        }
+        .sheet(isPresented: $showingDrinkPicker) {
+            drinkPresetPicker
         }
     }
 
@@ -71,6 +78,93 @@ struct WatchContentView: View {
         }
     }
 
+    // MARK: - Quick Add Buttons
+
+    private var quickAddButtons: some View {
+        VStack(spacing: 8) {
+            Button {
+                showingDrinkPicker = true
+            } label: {
+                Label("Drink", systemImage: "wineglass")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+
+            Button {
+                sessionManager.sendLogWaterCommand()
+            } label: {
+                Label("Water", systemImage: "drop.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+        }
+    }
+
+    // MARK: - Drink Preset Picker
+
+    private var drinkPresetPicker: some View {
+        NavigationStack {
+            List {
+                if sessionManager.presets.isEmpty {
+                    // Default quick options when no presets synced
+                    defaultDrinkOptions
+                } else {
+                    ForEach(sessionManager.presets) { preset in
+                        Button {
+                            sessionManager.sendLogDrinkCommand(preset: preset)
+                            showingDrinkPicker = false
+                        } label: {
+                            HStack {
+                                Text(preset.name)
+                                    .font(.body)
+                                Spacer()
+                                Text("\(preset.standardDrinkEstimate, specifier: "%.1f") std")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Log Drink")
+        }
+    }
+
+    private var defaultDrinkOptions: some View {
+        let defaults: [(String, String, Double, Double)] = [
+            ("Beer", "beer", 12.0, 1.0),
+            ("Wine", "wine", 5.0, 1.0),
+            ("Shot", "liquor", 1.5, 1.0),
+            ("Cocktail", "cocktail", 6.0, 1.0),
+            ("Double", "liquor", 3.0, 2.0),
+        ]
+        return ForEach(defaults, id: \.0) { name, drinkType, sizeOz, estimate in
+            Button {
+                let preset = WatchSessionManager.WatchPreset(
+                    name: name,
+                    drinkType: drinkType,
+                    sizeOz: sizeOz,
+                    standardDrinkEstimate: estimate
+                )
+                sessionManager.sendLogDrinkCommand(preset: preset)
+                showingDrinkPicker = false
+            } label: {
+                HStack {
+                    Text(name)
+                        .font(.body)
+                    Spacer()
+                    Text("\(estimate, specifier: "%.1f") std")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     // MARK: - No Session
 
     private var noSessionView: some View {
@@ -83,6 +177,16 @@ struct WatchContentView: View {
             Text("No active session")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            Button {
+                sessionManager.sendStartSessionCommand()
+            } label: {
+                Label("Start Session", systemImage: "play.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.green)
         }
     }
 }

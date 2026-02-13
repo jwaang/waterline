@@ -2,13 +2,15 @@ import Foundation
 import WatchConnectivity
 
 /// Manages WatchConnectivity on the iOS side.
-/// Sends session state and water reminders to the watch.
-/// Receives commands (log water) from the watch.
+/// Sends session state, presets, and water reminders to the watch.
+/// Receives commands (log water, log drink, start session) from the watch.
 @MainActor
 final class WatchConnectivityManager: NSObject, @unchecked Sendable {
 
-    // Callback for when watch requests water logging
+    // Callbacks for watch commands
     var onWatchLogWater: (() -> Void)?
+    var onWatchLogDrink: ((_ presetName: String, _ drinkType: String, _ sizeOz: Double, _ standardDrinkEstimate: Double) -> Void)?
+    var onWatchStartSession: (() -> Void)?
 
     private var wcSession: WCSession?
 
@@ -60,6 +62,23 @@ final class WatchConnectivityManager: NSObject, @unchecked Sendable {
         try? session.updateApplicationContext(context)
     }
 
+    /// Sends drink presets to the watch for the preset picker.
+    /// Each preset is serialized as a dictionary with name, drinkType, sizeOz, standardDrinkEstimate.
+    func sendPresets(_ presets: [[String: Any]]) {
+        guard let session = wcSession, session.activationState == .activated else { return }
+        let message: [String: Any] = [
+            "type": "presets",
+            "presets": presets,
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        // Use sendMessage for immediate delivery if reachable, otherwise transferUserInfo
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil)
+        } else {
+            session.transferUserInfo(message)
+        }
+    }
+
     // MARK: - Private
 
     private func sendWaterReminderViaTransfer(title: String, body: String) {
@@ -92,16 +111,31 @@ extension WatchConnectivityManager: WCSessionDelegate {
         session.activate()
     }
 
-    /// Receives messages from watch (e.g., "logWater" command).
+    /// Receives messages from watch (e.g., "logWater", "logDrink", "startSession" commands).
     nonisolated func session(
         _ session: WCSession,
         didReceiveMessage message: [String: Any]
     ) {
         guard let type = message["type"] as? String else { return }
-        if type == "logWater" {
+        switch type {
+        case "logWater":
             Task { @MainActor in
                 self.onWatchLogWater?()
             }
+        case "logDrink":
+            let name = message["presetName"] as? String ?? "Drink"
+            let drinkType = message["drinkType"] as? String ?? "beer"
+            let sizeOz = message["sizeOz"] as? Double ?? 12.0
+            let estimate = message["standardDrinkEstimate"] as? Double ?? 1.0
+            Task { @MainActor in
+                self.onWatchLogDrink?(name, drinkType, sizeOz, estimate)
+            }
+        case "startSession":
+            Task { @MainActor in
+                self.onWatchStartSession?()
+            }
+        default:
+            break
         }
     }
 }
