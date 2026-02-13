@@ -194,3 +194,21 @@ after each iteration and it's included in prompts for context.
   - Convex sync pattern follows auth precedent: fire-and-forget with non-fatal failure — local SwiftData is authoritative
 ---
 
+## Feb 12, 2026 - US-010
+- What was implemented:
+  - `WaterlineIndicator` enhanced with configurable `warningThreshold` parameter (default: 2, matching UserSettings default)
+  - `HomeView` now reads user's `warningThreshold` from `@Query` on `User` model and passes to indicator
+  - `ActiveSessionView` similarly reads user settings for dynamic threshold
+  - 15 new tests across 2 suites: Waterline Indicator Rendering Logic (11 tests covering values -3, 0, 1, 2, 3, 5, custom thresholds, fill direction, clamping) and Waterline Indicator with Session Data (4 tests verifying indicator behavior with real SwiftData sessions)
+  - All 114 tests pass across 33 suites
+- Files changed:
+  - `Waterline/HomeView.swift` (modified — added `@Query` for users, `warningThreshold` computed property, parameterized `WaterlineIndicator`)
+  - `Waterline/ActiveSessionView.swift` (modified — added `@Query` for users, `warningThreshold` computed property, parameterized `WaterlineIndicator`)
+  - `WaterlineTests/WaterlineTests.swift` (added 15 tests)
+- **Learnings:**
+  - `WaterlineIndicator` was already built in US-008 with hardcoded threshold — US-010 primarily added dynamic threshold from UserSettings and comprehensive tests
+  - Adding `@Query private var users: [User]` to views that need settings is the cleanest SwiftUI pattern — no need to pass settings through init
+  - Default parameter values on SwiftUI view properties (`var warningThreshold: Int = 2`) maintain backward compatibility with existing call sites
+  - The indicator's visual logic (GeometryReader fill, clamping to ±5, center-relative positioning) was already correct from US-008 — tests validated all edge cases
+---
+

@@ -5,9 +5,11 @@ struct ActiveSessionView: View {
     let sessionId: UUID
 
     @Query private var sessions: [Session]
+    @Query private var users: [User]
     @Environment(\.modelContext) private var modelContext
 
     private var session: Session? { sessions.first }
+    private var warningThreshold: Int { users.first?.settings.warningThreshold ?? 2 }
 
     init(sessionId: UUID) {
         self.sessionId = sessionId
@@ -32,7 +34,7 @@ struct ActiveSessionView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            WaterlineIndicator(value: waterlineValue(for: session))
+            WaterlineIndicator(value: waterlineValue(for: session), warningThreshold: warningThreshold)
 
             countsSection(for: session)
 

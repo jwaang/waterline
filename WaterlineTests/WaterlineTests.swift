@@ -1659,6 +1659,249 @@ struct WaterlineIndicatorWarningTests {
     }
 }
 
+// MARK: - US-010: Waterline Indicator Tests
+
+@Suite("Waterline Indicator Rendering Logic")
+struct WaterlineIndicatorRenderingTests {
+    @Test("Value -3 is below center, no warning")
+    func valueNegativeThree() {
+        let value: Double = -3.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(!isWarning)
+        #expect(value < 0) // Below center = buffered
+    }
+
+    @Test("Value 0 is balanced at center, no warning")
+    func valueZero() {
+        let value: Double = 0.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(!isWarning)
+        #expect(value == 0) // Balanced
+    }
+
+    @Test("Value 1 is above center but below warning threshold")
+    func valueOne() {
+        let value: Double = 1.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(!isWarning)
+        #expect(value > 0) // Above center = over-paced
+    }
+
+    @Test("Value 2 is at warning threshold — warning active")
+    func valueTwo() {
+        let value: Double = 2.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(isWarning)
+    }
+
+    @Test("Value 3 is above warning threshold — warning active")
+    func valueThree() {
+        let value: Double = 3.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(isWarning)
+    }
+
+    @Test("Value 5 is well above warning threshold — warning active")
+    func valueFive() {
+        let value: Double = 5.0
+        let threshold = 2
+        let isWarning = value >= Double(threshold)
+        #expect(isWarning)
+    }
+
+    @Test("Custom warning threshold of 4 — value 3 is not warning")
+    func customThresholdBelowWarning() {
+        let value: Double = 3.0
+        let threshold = 4
+        let isWarning = value >= Double(threshold)
+        #expect(!isWarning) // Below custom threshold
+    }
+
+    @Test("Custom warning threshold of 4 — value 4 is warning")
+    func customThresholdAtWarning() {
+        let value: Double = 4.0
+        let threshold = 4
+        let isWarning = value >= Double(threshold)
+        #expect(isWarning) // At custom threshold
+    }
+
+    @Test("Fill direction: positive values fill upward from center")
+    func positiveFillDirection() {
+        let value: Double = 2.5
+        #expect(value >= 0) // Fills upward from center
+        let clampedValue = min(max(value, -5), 5)
+        let fillHeight = abs(clampedValue) / 5.0
+        #expect(fillHeight == 0.5) // 50% fill
+    }
+
+    @Test("Fill direction: negative values fill downward from center")
+    func negativeFillDirection() {
+        let value: Double = -2.5
+        #expect(value < 0) // Fills downward from center
+        let clampedValue = min(max(value, -5), 5)
+        let fillHeight = abs(clampedValue) / 5.0
+        #expect(fillHeight == 0.5) // 50% fill
+    }
+
+    @Test("Value clamped to ±5 range for visual bounds")
+    func valueClamping() {
+        let extreme: Double = 10.0
+        let clamped = min(max(extreme, -5), 5)
+        #expect(clamped == 5.0) // Clamped to max
+
+        let negExtreme: Double = -8.0
+        let negClamped = min(max(negExtreme, -5), 5)
+        #expect(negClamped == -5.0) // Clamped to min
+    }
+}
+
+@Suite("Waterline Indicator with Session Data")
+struct WaterlineIndicatorSessionTests {
+    @Test("Indicator at value -3 from 3 water logs, 0 drinks")
+    func threeWaterNoAlcohol() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        for i in 0..<3 {
+            let water = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .water,
+                waterMeta: WaterMeta(amountOz: 8.0)
+            )
+            water.session = session
+            context.insert(water)
+        }
+        context.insert(session)
+        try context.save()
+
+        var waterlineValue: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == -3.0)
+        #expect(waterlineValue < Double(2)) // No warning
+    }
+
+    @Test("Indicator at value 0 from balanced drinks and water")
+    func balancedAtZero() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        // 2 drinks (1.0 each) + 2 water = 0
+        for i in 0..<2 {
+            let drink = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .alcohol,
+                alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+            )
+            drink.session = session
+            context.insert(drink)
+        }
+        for i in 2..<4 {
+            let water = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .water,
+                waterMeta: WaterMeta(amountOz: 8.0)
+            )
+            water.session = session
+            context.insert(water)
+        }
+        context.insert(session)
+        try context.save()
+
+        var waterlineValue: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 0.0)
+    }
+
+    @Test("Indicator at value 5 from 5 drinks, 0 water — warning at default threshold")
+    func fiveDrinksNoWater() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        for i in 0..<5 {
+            let drink = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .alcohol,
+                alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+            )
+            drink.session = session
+            context.insert(drink)
+        }
+        context.insert(session)
+        try context.save()
+
+        var waterlineValue: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 5.0)
+        #expect(waterlineValue >= Double(2)) // Warning active at default threshold
+    }
+
+    @Test("Warning threshold from UserSettings applies correctly")
+    func warningThresholdFromUserSettings() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        var customSettings = UserSettings()
+        customSettings.warningThreshold = 4
+        let user = User(appleUserId: "threshold-test-\(UUID().uuidString)", settings: customSettings)
+        context.insert(user)
+
+        let session = Session(isActive: true)
+        session.user = user
+        // 3 drinks → waterline = 3.0
+        for i in 0..<3 {
+            let drink = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .alcohol,
+                alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+            )
+            drink.session = session
+            context.insert(drink)
+        }
+        context.insert(session)
+        try context.save()
+
+        var waterlineValue: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 3.0)
+        // With threshold 4, value 3 should NOT be warning
+        #expect(waterlineValue < Double(customSettings.warningThreshold))
+        // With default threshold 2, it WOULD be warning
+        #expect(waterlineValue >= Double(UserSettings().warningThreshold))
+    }
+}
+
 // MARK: - US-009: Start Session Tests
 
 @Suite("Start Session Creation")

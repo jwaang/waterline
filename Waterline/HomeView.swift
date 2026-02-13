@@ -13,9 +13,12 @@ struct HomeView: View {
         filter: #Predicate<Session> { $0.isActive }
     ) private var activeSessions: [Session]
 
+    @Query private var users: [User]
+
     @State private var navigationPath = NavigationPath()
 
     private var activeSession: Session? { activeSessions.first }
+    private var warningThreshold: Int { users.first?.settings.warningThreshold ?? 2 }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -50,7 +53,7 @@ struct HomeView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            WaterlineIndicator(value: waterlineValue(for: session))
+            WaterlineIndicator(value: waterlineValue(for: session), warningThreshold: warningThreshold)
 
             countsSection(for: session)
 
@@ -256,8 +259,9 @@ struct HomeView: View {
 
 struct WaterlineIndicator: View {
     let value: Double
+    var warningThreshold: Int = 2
 
-    private var isWarning: Bool { value >= 2 }
+    private var isWarning: Bool { value >= Double(warningThreshold) }
 
     var body: some View {
         VStack(spacing: 8) {
