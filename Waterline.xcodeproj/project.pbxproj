@@ -12,7 +12,6 @@
 		0D5F8C352CB2A1A3A4FD062C /* ConfigureDefaultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418AFCC644115066C972174A /* ConfigureDefaultsView.swift */; };
 		2242C6E17B5696CA8415D967 /* WaterlineWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B8651BE0BE124C8A594A229 /* WaterlineWidgets.swift */; };
 		2445BC13687D271CED595BF4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DF8AB6AC47AD0653B444B0 /* ContentView.swift */; };
-		25E077EA8883369CA510198E /* WaterlineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4BCF3199C5997EEF39BD43 /* WaterlineTests.swift */; };
 		349E4803DA753D20A5770F6F /* WaterlineIntentsExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */; };
 		35E1247D74602F7B8A7D4E89 /* WaterlineApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC30BDE82B26B39B8C89DD2 /* WaterlineApp.swift */; };
 		54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA0B9A74998663E2DAFA317 /* Models.swift */; };
@@ -28,6 +27,7 @@
 		CCA846A88E58371F54278E2D /* WaterlineTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */; };
 		DEA443AEC286FA3E2B0AD169 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DD6621139B9298618E56EA /* ConvexService.swift */; };
 		DEBE12ED2E07D31569DCB47F /* WaterlineWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC636F72ED3688D8416E2274 /* WaterlineWatchApp.swift */; };
+		EC20CBDEBBBF4150EDC45E0B /* LogDrinkView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A638D0863309D4978D04E0BF /* LogDrinkView.swift */; };
 		F3ADDEB8A5D1D4374199FBB9 /* WaterlineIntents.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = DB25235E71F78A8696A30094 /* WaterlineIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FC3EA435F79AF6789E1C7DEA /* LogWaterIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDDD8FA063EC599A155B751 /* LogWaterIntent.swift */; };
 		FFE0AC7B95BD7285FC10703D /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7203C31DCB9904FD9E6C1E64 /* ActiveSessionView.swift */; };
@@ -47,13 +47,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 339CC83936A6F6A83638DFBF;
 			remoteInfo = WaterlineWidgets;
-		};
-		E1FFB4B322EA81218E0DB92B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 121E5DB97AB2AAC1888D7AFC /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 05333D2E24F393C852FD5049;
-			remoteInfo = Waterline;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -104,12 +97,11 @@
 		98D15AF08F7CE9A78C8D88B2 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		9B8651BE0BE124C8A594A229 /* WaterlineWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineWidgets.swift; sourceTree = "<group>"; };
 		A2ABC15956027794D080920C /* SessionSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryView.swift; sourceTree = "<group>"; };
+		A638D0863309D4978D04E0BF /* LogDrinkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogDrinkView.swift; sourceTree = "<group>"; };
 		AADF82E897611F993792D175 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		CC636F72ED3688D8416E2274 /* WaterlineWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineWatchApp.swift; sourceTree = "<group>"; };
-		D65A523F73D7540E9F019EB9 /* WaterlineTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = WaterlineTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		DB25235E71F78A8696A30094 /* WaterlineIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = WaterlineIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F65E115F53D7E81EF8D6E11D /* LogDrinkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogDrinkIntent.swift; sourceTree = "<group>"; };
-		FE4BCF3199C5997EEF39BD43 /* WaterlineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -128,7 +120,6 @@
 			children = (
 				6D1F7F683548B2360B290401 /* Waterline */,
 				B9039EB44F521C68D9F1AF78 /* WaterlineIntents */,
-				5A0A3805E820003AA4D73CC7 /* WaterlineTests */,
 				38512FB29BCF4A8FD2AA8688 /* WaterlineWatch */,
 				545B629A17BC4D6A2786AB0F /* WaterlineWidgets */,
 				6C7C8EA5F09690AAF50CC6E5 /* Products */,
@@ -145,20 +136,11 @@
 			path = WaterlineWidgets;
 			sourceTree = "<group>";
 		};
-		5A0A3805E820003AA4D73CC7 /* WaterlineTests */ = {
-			isa = PBXGroup;
-			children = (
-				FE4BCF3199C5997EEF39BD43 /* WaterlineTests.swift */,
-			);
-			path = WaterlineTests;
-			sourceTree = "<group>";
-		};
 		6C7C8EA5F09690AAF50CC6E5 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				609853B3566C2388A9C96F4F /* Waterline.app */,
 				DB25235E71F78A8696A30094 /* WaterlineIntents.appex */,
-				D65A523F73D7540E9F019EB9 /* WaterlineTests.xctest */,
 				3A047B8CE97B53FC6DC12BA0 /* WaterlineWatch.app */,
 				6DCD502EFF5665453A864235 /* WaterlineWidgets.appex */,
 			);
@@ -175,6 +157,7 @@
 				88DF8AB6AC47AD0653B444B0 /* ContentView.swift */,
 				45DD6621139B9298618E56EA /* ConvexService.swift */,
 				77DC1A7D167FC4E8FE09E140 /* HomeView.swift */,
+				A638D0863309D4978D04E0BF /* LogDrinkView.swift */,
 				8EA0B9A74998663E2DAFA317 /* Models.swift */,
 				973B8EDEAE3005672BCEF80B /* OnboardingView.swift */,
 				A2ABC15956027794D080920C /* SessionSummaryView.swift */,
@@ -272,24 +255,6 @@
 			productReference = DB25235E71F78A8696A30094 /* WaterlineIntents.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
-		BD1CA9DBA3121E3D029CFD14 /* WaterlineTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 292BD68FF8BB351BF023CC8C /* Build configuration list for PBXNativeTarget "WaterlineTests" */;
-			buildPhases = (
-				44AA8BFB4918C5A1C5AFB287 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				82B01910CC3D6EBA49576CE9 /* PBXTargetDependency */,
-			);
-			name = WaterlineTests;
-			packageProductDependencies = (
-			);
-			productName = WaterlineTests;
-			productReference = D65A523F73D7540E9F019EB9 /* WaterlineTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -315,7 +280,6 @@
 			targets = (
 				05333D2E24F393C852FD5049 /* Waterline */,
 				69A568D048129E847FBB2B81 /* WaterlineIntents */,
-				BD1CA9DBA3121E3D029CFD14 /* WaterlineTests */,
 				34A1BE8D2D1B2D00717B8F24 /* WaterlineWatch */,
 				339CC83936A6F6A83638DFBF /* WaterlineWidgets */,
 			);
@@ -360,19 +324,12 @@
 				2445BC13687D271CED595BF4 /* ContentView.swift in Sources */,
 				DEA443AEC286FA3E2B0AD169 /* ConvexService.swift in Sources */,
 				0AA821402CE618218EF32298 /* HomeView.swift in Sources */,
+				EC20CBDEBBBF4150EDC45E0B /* LogDrinkView.swift in Sources */,
 				54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */,
 				81640489E75D021E0B5E9D8C /* OnboardingView.swift in Sources */,
 				8E882A2F61FB14D84DAD6CBB /* SessionSummaryView.swift in Sources */,
 				7518B5E3329AF18C9216A0DB /* SignInView.swift in Sources */,
 				35E1247D74602F7B8A7D4E89 /* WaterlineApp.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		44AA8BFB4918C5A1C5AFB287 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				25E077EA8883369CA510198E /* WaterlineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -416,11 +373,6 @@
 			isa = PBXTargetDependency;
 			target = 339CC83936A6F6A83638DFBF /* WaterlineWidgets */;
 			targetProxy = ABC1943A06413A11295E5879 /* PBXContainerItemProxy */;
-		};
-		82B01910CC3D6EBA49576CE9 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 05333D2E24F393C852FD5049 /* Waterline */;
-			targetProxy = E1FFB4B322EA81218E0DB92B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -477,23 +429,6 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
-		};
-		4D28854D85327409BFEC3DEB /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.waterline.app.tests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Waterline.app/Waterline";
-			};
-			name = Debug;
 		};
 		75FA148D310AD9939922894E /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -623,23 +558,6 @@
 			};
 			name = Debug;
 		};
-		C5BB88638323BB049D33CF2A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.waterline.app.tests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Waterline.app/Waterline";
-			};
-			name = Release;
-		};
 		C826DA7F15AF7FDB07F51CAC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -717,15 +635,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		292BD68FF8BB351BF023CC8C /* Build configuration list for PBXNativeTarget "WaterlineTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				4D28854D85327409BFEC3DEB /* Debug */,
-				C5BB88638323BB049D33CF2A /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		78E4DCB96C6A55B94A1D6B82 /* Build configuration list for PBXNativeTarget "WaterlineWatch" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

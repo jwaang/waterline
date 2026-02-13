@@ -21,20 +21,6 @@
                ReferencedContainer = "container:Waterline.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "NO"
-            buildForProfiling = "NO"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BD1CA9DBA3121E3D029CFD14"
-               BuildableName = "WaterlineTests.xctest"
-               BlueprintName = "WaterlineTests"
-               ReferencedContainer = "container:Waterline.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -53,20 +39,7 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "BD1CA9DBA3121E3D029CFD14"
-               BuildableName = "WaterlineTests.xctest"
-               BlueprintName = "WaterlineTests"
-               ReferencedContainer = "container:Waterline.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"

@@ -24,6 +24,15 @@ after each iteration and it's included in prompts for context.
 - Tests use Swift Testing framework (`@Test`, `@Suite`, `#expect`)
 - Test target `WaterlineTests` depends on `Waterline` target
 
+### Sheet-Based Logging Pattern (LogDrinkView.swift)
+- Logging flows use `@State private var showingSheet = false` + `.sheet(isPresented:)` on the button container
+- Pass session object and `onLogged` callback for post-log side effects (reminders, sync)
+- Waterline state is fully computed from `session.logEntries` — no separate state tracking needed; `@Query` auto-refreshes views
+
+### Per-Drink Water Reminder Pattern
+- After logging a drink, compute `alcoholCountSinceLastWater` and compare to `userSettings.waterEveryNDrinks`
+- If threshold met, fire `UNNotificationRequest` with `UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)` for immediate delivery
+
 ### Home Screen Navigation Pattern (HomeView.swift)
 - `HomeView` uses `@Query` with `#Predicate { !$0.isActive }` and `SortDescriptor(\Session.startTime, order: .reverse)` to fetch past sessions
 - `NavigationStack` with `NavigationLink(value: session.id)` + `.navigationDestination(for: UUID.self)` for type-safe navigation to `SessionSummaryView`
@@ -231,5 +240,25 @@ after each iteration and it's included in prompts for context.
   - `Timer.publish(every: 1, on: .main, in: .common).autoconnect()` with `onReceive` is the standard SwiftUI pattern for live countdown displays — no need for `ObservableObject` or custom timer manager
   - `alcoholCountSinceLastWater` must process entries in timestamp order (same as waterline computation) — the running count resets on each water entry, leaving only the count since the most recent water
   - Reminder countdown uses last log entry timestamp as the anchor, not session start — this means the countdown "resets" each time the user logs anything, which is intuitive (you just interacted, so the next reminder is interval-from-now)
+---
+
+## 2026-02-12 - US-012
+- What was implemented:
+  - Full alcoholic drink logging flow: drink type picker (beer/wine/liquor/cocktail segmented), size presets per type, adjustable standard drink estimate (+/- 0.5 in range 0.5-5.0), confirm button
+  - `LogDrinkView` presented as sheet from both `ActiveSessionView` and `HomeView` "+ Drink" buttons
+  - On confirm: `LogEntry` created with `type: .alcohol`, `alcoholMeta` (drinkType, sizeOz, standardDrinkEstimate), `source: .phone`, linked to session via relationship
+  - Per-drink water reminder: after logging, checks `alcoholCountSinceLastWater >= waterEveryNDrinks` and fires local notification via `UNUserNotificationCenter`
+  - Size presets from PRD: beer 12oz(1.0)/16oz(1.3)/pint 20oz(1.7), wine 5oz(1.0)/glass 6oz(1.2), liquor 1.5oz(1.0)/double 3oz(2.0), cocktail standard(1.0)/strong(1.5)
+  - Waterline value update, warning state, and counter updates are automatic via existing computed properties iterating `session.logEntries`
+  - Convex background sync deferred to US-026 (offline-first sync), consistent with existing patterns
+- Files changed:
+  - `Waterline/LogDrinkView.swift` (new) — drink type picker, size presets, estimate adjuster, LogEntry creation
+  - `Waterline/ActiveSessionView.swift` (modified) — wired "+ Drink" button to sheet, added per-drink reminder logic, added UserNotifications import
+  - `Waterline/HomeView.swift` (modified) — wired "+ Drink" button to sheet, added per-drink reminder logic, added UserNotifications import
+- **Learnings:**
+  - `DrinkType` already has `CaseIterable` conformance in Models.swift, enabling easy `ForEach` iteration in segmented picker
+  - `@Query` in ActiveSessionView auto-refreshes when new `LogEntry` objects are inserted with session relationship set — counters/waterline update immediately without manual state management
+  - `onChange(of:)` in Swift 6 uses no-parameter closure syntax: `onChange(of: selectedType) { ... }` not `onChange(of: selectedType) { oldValue, newValue in ... }`
+  - Sheet presentation works best when `.sheet(isPresented:)` is attached to the parent container (HStack) rather than individual buttons
 ---
 

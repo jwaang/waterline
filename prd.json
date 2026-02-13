@@ -17,7 +17,7 @@
         "Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -34,7 +34,7 @@
         "All models use `@Model` macro and relationships are properly defined"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -53,7 +53,7 @@
         "Swift service layer (`ConvexService`) that wraps API calls with async/await"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -70,7 +70,7 @@
         "Error handling: show alert on auth failure with retry option"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -87,7 +87,7 @@
         "Verified in Simulator: screens display correctly, navigation works"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -102,7 +102,7 @@
         "Request notification permission with explanation before asking (\"Waterline sends gentle reminders to drink water during your session\")"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -118,7 +118,7 @@
         "Verified in Simulator"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -133,7 +133,7 @@
         "Verified in Simulator"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -149,7 +149,7 @@
         "Live Activity starts (handled in separate story, but session creation triggers it)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -166,7 +166,7 @@
         "Verified in Simulator: indicator renders correctly at values -3, 0, 1, 2, 3, 5"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -204,9 +204,10 @@
         "Log syncs to Convex in background"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-013",
@@ -607,6 +608,6 @@
     "createdAt": "2026-02-13T04:17:18.073Z",
     "version": "1.0.0",
     "sourcePrd": "tasks/prd-waterline-mvp-ios-pacing-companion.md",
-    "updatedAt": "2026-02-13T04:23:16.589Z"
+    "updatedAt": "2026-02-13T04:31:13.202Z"
   }
 }

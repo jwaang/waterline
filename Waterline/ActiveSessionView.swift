@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import Combine
+import UserNotifications
 
 struct ActiveSessionView: View {
     let sessionId: UUID
@@ -10,6 +11,7 @@ struct ActiveSessionView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var now = Date()
+    @State private var showingDrinkSheet = false
 
     private var session: Session? { sessions.first }
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
@@ -47,7 +49,7 @@ struct ActiveSessionView: View {
 
             reminderStatusSection(for: session)
 
-            quickAddButtons
+            quickAddButtons(for: session)
 
             Spacer()
         }
@@ -167,10 +169,10 @@ struct ActiveSessionView: View {
         session.logEntries.filter { $0.type == .water }.count
     }
 
-    private var quickAddButtons: some View {
+    private func quickAddButtons(for session: Session) -> some View {
         HStack(spacing: 16) {
             Button {
-                // Drink logging — implemented in US-012/US-014
+                showingDrinkSheet = true
             } label: {
                 Label("Drink", systemImage: "wineglass")
                     .font(.headline)
@@ -193,6 +195,37 @@ struct ActiveSessionView: View {
             .tint(.blue)
             .accessibilityLabel("Add Water")
         }
+        .sheet(isPresented: $showingDrinkSheet) {
+            LogDrinkView(session: session) {
+                checkPerDrinkReminder(for: session)
+            }
+        }
+    }
+
+    // MARK: - Per-Drink Water Reminder
+
+    private func checkPerDrinkReminder(for session: Session) {
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = userSettings.waterEveryNDrinks
+        if sinceLastWater >= waterEveryN {
+            schedulePerDrinkWaterReminder(drinkCount: sinceLastWater)
+        }
+    }
+
+    private func schedulePerDrinkWaterReminder(drinkCount: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "Time for water"
+        content.body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
+        content.sound = .default
+        content.categoryIdentifier = "WATER_REMINDER"
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "perDrinkReminder-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
     }
 }
 
