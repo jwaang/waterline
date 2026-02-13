@@ -80,6 +80,17 @@ after each iteration and it's included in prompts for context.
 - `SyncService` threaded through view hierarchy: `WaterlineApp` → `RootView` → `HomeView` → `ActiveSessionView`
 - After `xcodegen generate`, new Swift files are auto-included from `path: Waterline` source glob
 
+### WatchConnectivity Pattern (WatchConnectivityManager.swift / WatchSessionManager.swift)
+- iOS side: `WatchConnectivityManager` is `@MainActor final class NSObject, @unchecked Sendable` with `WCSessionDelegate`
+- watchOS side: `WatchSessionManager` is `@MainActor final class NSObject, ObservableObject, @unchecked Sendable` with `WCSessionDelegate`
+- Three delivery channels: `sendMessage` (real-time, reachable only), `transferUserInfo` (queued, guaranteed), `updateApplicationContext` (latest-state-wins)
+- Water reminders: `sendMessage` with `transferUserInfo` fallback — ensures delivery even when watch was not reachable
+- Session state: `updateApplicationContext` — last value wins, automatically delivered on watch activation
+- Watch → phone commands: `sendMessage` with `{"type": "logWater"}` — phone's `onWatchLogWater` callback creates `LogEntry(source: .watch)`
+- `ReminderService.watchManager` static property set at app launch — enables forwarding from `schedulePerDrinkReminder()` and `schedulePacingWarning()`
+- `NotificationDelegate.willPresent` forwards only time-based recurring reminders to watch (identified by `reminderIdentifierPrefix`) — per-drink/pacing forward at schedule time
+- `WKInterfaceDevice.current().play(.notification)` for gentle haptic on watch when reminder received
+
 ---
 
 ## Feb 12, 2026 - US-003
@@ -488,5 +499,36 @@ after each iteration and it's included in prompts for context.
   - `@State private var syncService: SyncService` in `WaterlineApp` requires `_syncService = State(initialValue:)` initialization in `init()` since the property wrapper can't be assigned directly before `self` is available
   - `symbolEffect(.pulse, isActive:)` provides a nice animated indicator for the syncing state on SF Symbols without needing a custom animation
   - XcodeGen auto-includes new `.swift` files from the `path: Waterline` source glob, but `xcodegen generate` must be re-run for the Xcode project to pick them up
+---
+
+## 2026-02-13 - US-028
+- What was implemented:
+  - `WatchConnectivityManager` (iOS side): sends water reminder messages to watch via `WCSession.sendMessage` (real-time) with `transferUserInfo` fallback, receives "logWater" commands from watch via `didReceiveMessage`
+  - `WatchSessionManager` (watchOS side): receives water reminders and plays `.notification` haptic via `WKInterfaceDevice.current().play(.notification)`, publishes `pendingReminder` state for UI display, sends "logWater" command back to phone
+  - `WatchContentView` updated: shows `WaterReminderSheet` as `.sheet(item:)` when reminder received, with "Log Water" button that calls `sendLogWaterCommand()` and "Dismiss" button
+  - `ReminderService` updated: added `@MainActor static var watchManager` property, `schedulePerDrinkReminder()` centralized method that both schedules notification and forwards to watch, `schedulePacingWarning()` also forwards to watch
+  - `NotificationDelegate.willPresent` updated: forwards time-based recurring reminders (identified by `reminderIdentifierPrefix`) to watch — avoids double-send for per-drink/pacing which forward at schedule time
+  - `WaterlineApp` updated: creates `WatchConnectivityManager`, wires `onWatchLogWater` callback to create water `LogEntry(source: .watch)` in active session, sets `ReminderService.watchManager` on appear
+  - `WaterlineWatchApp` updated: creates `WatchSessionManager` as `@StateObject` and passes to `WatchContentView`
+  - Per-drink reminder logic in `HomeView` and `ActiveSessionView` refactored to delegate to `ReminderService.schedulePerDrinkReminder()` (centralized, DRY)
+  - `project.yml` updated: added WaterlineWatch build scheme
+- Files changed:
+  - `Waterline/WatchConnectivityManager.swift` (new) — iOS-side WatchConnectivity manager
+  - `WaterlineWatch/WatchSessionManager.swift` (new) — watchOS-side session manager with haptic and state
+  - `WaterlineWatch/WatchContentView.swift` (modified — full rewrite with session state display, reminder sheet)
+  - `WaterlineWatch/WaterlineWatchApp.swift` (modified — WatchSessionManager creation and injection)
+  - `Waterline/ReminderService.swift` (modified — watchManager property, schedulePerDrinkReminder, watch forwarding)
+  - `Waterline/NotificationDelegate.swift` (modified — time-based reminder forwarding to watch)
+  - `Waterline/WaterlineApp.swift` (modified — WatchConnectivityManager creation, onWatchLogWater handler)
+  - `Waterline/HomeView.swift` (modified — delegated per-drink reminder to ReminderService)
+  - `Waterline/ActiveSessionView.swift` (modified — delegated per-drink reminder to ReminderService)
+  - `project.yml` (modified — added WaterlineWatch scheme)
+- **Learnings:**
+  - WatchConnectivity has three delivery channels with different guarantees: `sendMessage` (real-time, requires reachability), `transferUserInfo` (queued, guaranteed delivery), `updateApplicationContext` (latest-state-wins, overwritten). Water reminders use sendMessage + transferUserInfo fallback; session state uses applicationContext
+  - `NotificationDelegate.willPresent` is the only intercept point for recurring time-based reminders since they fire from iOS, not from our code. Per-drink and pacing reminders forward at schedule time, so `willPresent` must filter by notification identifier prefix to avoid double-sends
+  - `WKInterfaceDevice.current().play(.notification)` is the correct gentle haptic for water nudges — matches the PRD's "not alarming" requirement
+  - iOS WCSessionDelegate requires `sessionDidBecomeInactive` and `sessionDidDeactivate` (mandatory on iOS, not on watchOS) — the deactivate handler should call `session.activate()` for multi-watch support
+  - Adding watch target as dependency of iOS target in project.yml causes build failures if watchOS SDK simulator isn't installed — keep them as independent targets with separate schemes
+  - Centralizing per-drink reminder scheduling in `ReminderService.schedulePerDrinkReminder()` (instead of duplicating in both views) is cleaner and ensures consistent watch forwarding from a single code path
 ---
 

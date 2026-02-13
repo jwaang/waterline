@@ -8,6 +8,7 @@ import UserNotifications
 /// - Cancel all reminders when a session ends
 /// - Track last activity time and cancel reminders after 90 minutes of inactivity
 /// - Register the notification category with "Log Water" and "Dismiss" actions
+/// - Forward water reminders to Apple Watch via WatchConnectivityManager
 enum ReminderService {
 
     // MARK: - Constants
@@ -18,6 +19,9 @@ enum ReminderService {
     static let reminderIdentifierPrefix = "timeReminder-"
     static let inactivityCheckIdentifier = "inactivityCheck"
     static let inactivityThresholdSeconds: TimeInterval = 90 * 60 // 90 minutes
+
+    /// Set at app launch to enable forwarding water reminders to Apple Watch.
+    @MainActor static var watchManager: WatchConnectivityManager?
 
     // MARK: - Category Registration
 
@@ -128,15 +132,46 @@ enum ReminderService {
         cancelAllTimeReminders()
     }
 
+    // MARK: - Per-Drink Water Reminder
+
+    /// Schedules a per-drink water reminder notification and forwards to Apple Watch.
+    /// Call when `alcoholCountSinceLastWater >= waterEveryNDrinks`.
+    static func schedulePerDrinkReminder(drinkCount: Int) {
+        let title = "Time for water"
+        let body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.categoryIdentifier = categoryIdentifier
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "perDrinkReminder-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+
+        // Forward to Apple Watch for haptic nudge
+        Task { @MainActor in
+            watchManager?.sendWaterReminder(title: title, body: body)
+        }
+    }
+
     // MARK: - Pacing Warning
 
     /// Fires a pacing warning notification when waterline crosses the warning threshold.
     /// Only call when `previousValue < threshold` and `newValue >= threshold` to ensure
     /// the notification fires once per crossing.
     static func schedulePacingWarning() {
+        let title = "Waterline is high"
+        let body = "Your Waterline is high — drink water to return to center"
+
         let content = UNMutableNotificationContent()
-        content.title = "Waterline is high"
-        content.body = "Your Waterline is high — drink water to return to center"
+        content.title = title
+        content.body = body
         content.sound = .default
         content.categoryIdentifier = categoryIdentifier
 
@@ -147,5 +182,10 @@ enum ReminderService {
             trigger: trigger
         )
         UNUserNotificationCenter.current().add(request)
+
+        // Forward to Apple Watch for haptic nudge
+        Task { @MainActor in
+            watchManager?.sendWaterReminder(title: title, body: body)
+        }
     }
 }

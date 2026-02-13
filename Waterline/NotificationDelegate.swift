@@ -15,8 +15,21 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
+        // Forward time-based reminders to Apple Watch for haptic nudge.
+        // Per-drink and pacing warnings forward at schedule time, so only
+        // forward the recurring time-based reminder here to avoid duplicates.
+        let requestId = notification.request.identifier
+        if requestId.hasPrefix(ReminderService.reminderIdentifierPrefix) {
+            let content = notification.request.content
+            let title = content.title
+            let body = content.body
+            Task { @MainActor in
+                ReminderService.watchManager?.sendWaterReminder(title: title, body: body)
+            }
+        }
+
         // Show banner + sound even when app is in foreground
-        [.banner, .sound]
+        return [.banner, .sound]
     }
 
     // MARK: - Action Handling

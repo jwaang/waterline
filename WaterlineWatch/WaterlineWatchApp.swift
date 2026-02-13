@@ -2,9 +2,11 @@ import SwiftUI
 
 @main
 struct WaterlineWatchApp: App {
+    @StateObject private var sessionManager = WatchSessionManager()
+
     var body: some Scene {
         WindowGroup {
-            WatchContentView()
+            WatchContentView(sessionManager: sessionManager)
         }
     }
 }

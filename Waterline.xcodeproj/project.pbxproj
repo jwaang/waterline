@@ -20,6 +20,7 @@
 		54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA0B9A74998663E2DAFA317 /* Models.swift */; };
 		68750563424307566492ED8B /* SyncService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86FD0E22BE61C14F7AB19AB3 /* SyncService.swift */; };
 		6CB136EE0438C01404E1F142 /* WaterlineWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6DCD502EFF5665453A864235 /* WaterlineWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		702F765B8D1E94D08E499BD9 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906BD1A774E97749D07DDAF4 /* WatchConnectivityManager.swift */; };
 		70B8A77FF1B88F6966D18B92 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7660566AFF2B39C183B54857 /* Assets.xcassets */; };
 		7518B5E3329AF18C9216A0DB /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57FBFAFDFF394F0980B0F734 /* SignInView.swift */; };
 		7BB79C6221244D12C13139D3 /* AddEditPresetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9590486F3F96F3593A3E768 /* AddEditPresetView.swift */; };
@@ -33,6 +34,7 @@
 		C9708B583690A2E40D290891 /* SyncStatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E839C4D0AD536E0E1D896D65 /* SyncStatusIndicator.swift */; };
 		C98E5F7B760FE0E56AE8A771 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D15AF08F7CE9A78C8D88B2 /* AuthenticationManager.swift */; };
 		CCA846A88E58371F54278E2D /* WaterlineTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */; };
+		D0C3B3842739EB953AF2376F /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10901EE644E3FAA61EDC417F /* WatchSessionManager.swift */; };
 		DEA443AEC286FA3E2B0AD169 /* ConvexService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DD6621139B9298618E56EA /* ConvexService.swift */; };
 		DEBE12ED2E07D31569DCB47F /* WaterlineWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC636F72ED3688D8416E2274 /* WaterlineWatchApp.swift */; };
 		E229B83E609A72A4FAFC660E /* ReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E796B5A65DE5B248AC81689 /* ReminderService.swift */; };
@@ -86,6 +88,7 @@
 
 /* Begin PBXFileReference section */
 		06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineTimelineProvider.swift; sourceTree = "<group>"; };
+		10901EE644E3FAA61EDC417F /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		20FA07103593D917FC1FECDE /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		2E1DA8348C354E4F66E5B7D1 /* EditLogEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditLogEntryView.swift; sourceTree = "<group>"; };
 		3A047B8CE97B53FC6DC12BA0 /* WaterlineWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterlineWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -106,6 +109,7 @@
 		88DF8AB6AC47AD0653B444B0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineIntentsExtension.swift; sourceTree = "<group>"; };
 		8EA0B9A74998663E2DAFA317 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		906BD1A774E97749D07DDAF4 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
 		935936E649BD604A4CE91AE9 /* PresetsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresetsListView.swift; sourceTree = "<group>"; };
 		973B8EDEAE3005672BCEF80B /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		98D15AF08F7CE9A78C8D88B2 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
@@ -128,6 +132,7 @@
 			children = (
 				AADF82E897611F993792D175 /* Assets.xcassets */,
 				20FA07103593D917FC1FECDE /* WatchContentView.swift */,
+				10901EE644E3FAA61EDC417F /* WatchSessionManager.swift */,
 				CC636F72ED3688D8416E2274 /* WaterlineWatchApp.swift */,
 			);
 			path = WaterlineWatch;
@@ -189,6 +194,7 @@
 				57FBFAFDFF394F0980B0F734 /* SignInView.swift */,
 				86FD0E22BE61C14F7AB19AB3 /* SyncService.swift */,
 				E839C4D0AD536E0E1D896D65 /* SyncStatusIndicator.swift */,
+				906BD1A774E97749D07DDAF4 /* WatchConnectivityManager.swift */,
 				5FC30BDE82B26B39B8C89DD2 /* WaterlineApp.swift */,
 			);
 			path = Waterline;
@@ -365,6 +371,7 @@
 				7518B5E3329AF18C9216A0DB /* SignInView.swift in Sources */,
 				68750563424307566492ED8B /* SyncService.swift in Sources */,
 				C9708B583690A2E40D290891 /* SyncStatusIndicator.swift in Sources */,
+				702F765B8D1E94D08E499BD9 /* WatchConnectivityManager.swift in Sources */,
 				35E1247D74602F7B8A7D4E89 /* WaterlineApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -383,6 +390,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AD0B4F626EBA7DB56047EB45 /* WatchContentView.swift in Sources */,
+				D0C3B3842739EB953AF2376F /* WatchSessionManager.swift in Sources */,
 				DEBE12ED2E07D31569DCB47F /* WaterlineWatchApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

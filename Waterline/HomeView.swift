@@ -318,19 +318,7 @@ struct HomeView: View {
     }
 
     private func schedulePerDrinkWaterReminder(drinkCount: Int) {
-        let content = UNMutableNotificationContent()
-        content.title = "Time for water"
-        content.body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
-        content.sound = .default
-        content.categoryIdentifier = ReminderService.categoryIdentifier
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "perDrinkReminder-\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-        UNUserNotificationCenter.current().add(request)
+        ReminderService.schedulePerDrinkReminder(drinkCount: drinkCount)
     }
 
     private func viewSessionButton(for session: Session) -> some View {

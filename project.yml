@@ -91,3 +91,9 @@ schemes:
         Waterline: all
     run:
       config: Debug
+  WaterlineWatch:
+    build:
+      targets:
+        WaterlineWatch: all
+    run:
+      config: Debug
