@@ -1,0 +1,14 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserdata
+*.xcworkspace/xcuserdata/
+
+# macOS
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Package manager
+package-lock.json

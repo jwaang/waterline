@@ -1,19 +1,21 @@
 configVersion = "2.1"
 maxIterations = 10
 agent = "claude"
-tracker = "beads"
+tracker = "json"
 autoCommit = true
-subagentTracingDetail = "minimal"
+subagentTracingDetail = "full"
+defaultAgent = "claude"
 
 [agentOptions]
 [trackerOptions]
-beadsDir = ".beads"
-labels = ""
-
 [notifications]
 sound = "system"
 
-[parallel]
-mode = "auto"                           # auto | always | never
-maxWorkers = 1                          # Maximum concurrent workers
-directMerge = true                     # Merge directly to current branch (vs session branch)
+agent = "claude"
+fallbackAgents = ["codex"]
+ 
+[rateLimitHandling]
+enabled = true
+maxRetries = 3
+baseBackoffMs = 5000
+recoverPrimaryBetweenIterations = true

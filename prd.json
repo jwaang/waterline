@@ -1,0 +1,634 @@
+{
+  "name": "Waterline MVP — iOS Pacing Companion",
+  "description": "Waterline is a native Swift/SwiftUI iOS + Apple Watch pacing companion for alcohol consumption. It helps users drink less by inserting structured water breaks during \"Night Out\" sessions. The core mechanic is a Waterline indicator that rises with alcoholic drinks (by standard drink estimate) and lowers with water (-1). The app is minimalist, data-forward, and calm-tech — prioritizing clarity, restraint, and corrective nudges over gamification.",
+  "branchName": "feature/waterline-mvp-ios-pacing-companion",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Initialize Xcode project with all targets",
+      "description": "As a developer, I want a properly structured Xcode project so that all targets are configured from the start.",
+      "acceptanceCriteria": [
+        "New Xcode project named \"Waterline\" with bundle ID `com.waterline.app`",
+        "SwiftUI App target (iOS 17+)",
+        "watchOS companion app target (watchOS 10+)",
+        "WidgetKit extension target",
+        "App Intent extension target (for interactive widgets/Live Activity actions)",
+        "Project builds successfully for all targets",
+        "Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`, `WaterlineTests/`",
+        "Swift Testing framework configured in test target"
+      ],
+      "priority": 1,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-002",
+      "title": "Set up SwiftData models",
+      "description": "As a developer, I want the core data models defined in SwiftData so that all features can persist data locally.",
+      "acceptanceCriteria": [
+        "`User` model: `id`, `appleUserId`, `createdAt`, `settings` (embedded)",
+        "`UserSettings` model: `waterEveryNDrinks` (Int, default 1), `timeRemindersEnabled` (Bool), `timeReminderIntervalMinutes` (Int, default 20), `warningThreshold` (Int, default 2), `defaultWaterAmountOz` (Int, default 8), `units` (enum: oz/ml)",
+        "`Session` model: `id`, `userId`, `startTime`, `endTime` (optional), `isActive` (Bool), `computedSummary` (optional)",
+        "`LogEntry` model: `id`, `sessionId`, `timestamp`, `type` (enum: alcohol/water), `alcoholMeta` (optional: drinkType, sizeOz, abv, standardDrinkEstimate, presetId), `waterMeta` (optional: amountOz), `source` (enum: phone/watch/widget/liveActivity)",
+        "`DrinkPreset` model: `id`, `userId`, `name`, `drinkType` (enum: beer/wine/liquor/cocktail), `sizeOz`, `abv` (optional), `standardDrinkEstimate` (Double)",
+        "All models use `@Model` macro and relationships are properly defined",
+        "Unit tests verify model creation, relationships, and defaults"
+      ],
+      "priority": 2,
+      "passes": true,
+      "labels": [],
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
+    },
+    {
+      "id": "US-003",
+      "title": "Set up Convex backend schema and sync foundation",
+      "description": "As a developer, I want Convex configured with matching schema so that data can sync to the cloud.",
+      "acceptanceCriteria": [
+        "Convex project initialized with `npx convex init`",
+        "Convex schema defined matching SwiftData models: `users`, `sessions`, `logEntries`, `drinkPresets` tables",
+        "Convex auth provider configured for Sign in with Apple (use built-in if available, otherwise custom function that accepts Apple identity token and creates/verifies user)",
+        "If Convex Swift SDK exists and is usable: integrate it; otherwise use Convex HTTP API via `URLSession` async/await",
+        "Basic CRUD mutation functions: `createUser`, `upsertSession`, `addLogEntry`, `deleteLogEntry`, `upsertDrinkPreset`",
+        "Basic query functions: `getActiveSession`, `getSessionLogs`, `getUserPresets`",
+        "Convex deployment works (`npx convex dev` runs without errors)",
+        "Swift service layer (`ConvexService`) that wraps API calls with async/await",
+        "Tests verify Convex functions work (can be integration tests or function-level tests)"
+      ],
+      "priority": 3,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-004",
+      "title": "Sign in with Apple authentication flow",
+      "description": "As a user, I want to sign in with my Apple ID so that my data is tied to my account.",
+      "acceptanceCriteria": [
+        "Sign in with Apple button on launch/onboarding screen using `SignInWithAppleButton`",
+        "On successful Apple auth, identity token sent to Convex to create/verify user",
+        "User record created in both SwiftData (local) and Convex (remote) on first login",
+        "Auth state persisted locally — user stays signed in across app launches",
+        "If Convex auth provider supports Apple natively, use that; otherwise custom token exchange via Convex function",
+        "Error handling: show alert on auth failure with retry option",
+        "Tests verify auth state management and token handling"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-005",
+      "title": "Onboarding flow — welcome and guardrail screens",
+      "description": "As a new user, I want a brief onboarding that explains what Waterline does and sets expectations.",
+      "acceptanceCriteria": [
+        "Welcome screen: \"Waterline helps you pace and drink less by adding water breaks.\"",
+        "Guardrail screen: \"This is a pacing tool. It does not estimate intoxication or guarantee how you'll feel tomorrow.\"",
+        "Screens use SwiftUI with calm, minimalist styling",
+        "Navigation: Welcome → Guardrail → Sign in with Apple → Configure defaults",
+        "Onboarding only shows once (persisted flag)",
+        "Verified in Simulator: screens display correctly, navigation works"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-006",
+      "title": "Onboarding flow — configure defaults",
+      "description": "As a new user, I want to set my pacing preferences during onboarding so the app works for me from the first session.",
+      "acceptanceCriteria": [
+        "Configuration screen with: water every N drinks (stepper, min 1, default 1), time-based reminders toggle + interval picker (10/15/20/30/45/60 min), warning threshold (stepper, min 1, default 2), units (oz/ml toggle)",
+        "Values saved to `UserSettings` in SwiftData",
+        "\"Done\" button completes onboarding and navigates to Home",
+        "Request notification permission with explanation before asking (\"Waterline sends gentle reminders to drink water during your session\")",
+        "Tests verify settings are persisted correctly"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-007",
+      "title": "Home screen — no active session state",
+      "description": "As a user, I want to see a clear home screen that lets me start a session or view past sessions.",
+      "acceptanceCriteria": [
+        "Primary CTA: \"Start Session\" button (prominent)",
+        "Secondary: Settings icon/button, Past Sessions list (last 5 sessions with date, duration, drink/water counts)",
+        "If no past sessions, show empty state message",
+        "Tapping a past session navigates to summary view",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-008",
+      "title": "Home screen — active session state",
+      "description": "As a user returning to the app with an active session, I want to immediately see my session status.",
+      "acceptanceCriteria": [
+        "If active session exists: show Waterline indicator, current counts (drinks/water), and \"View Session\" CTA",
+        "Quick-add buttons visible: \"+ Drink\" and \"+ Water\"",
+        "Session auto-recovery: if app was killed and session is still active, this state appears on relaunch",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-009",
+      "title": "Start session",
+      "description": "As a user, I want to start a \"Night Out\" session so I can begin tracking.",
+      "acceptanceCriteria": [
+        "Tapping \"Start Session\" creates a new `Session` in SwiftData with `startTime = now`, `isActive = true`",
+        "Only one active session allowed — if one exists, navigate to it instead",
+        "Session syncs to Convex in background",
+        "Navigates to Active Session screen",
+        "Live Activity starts (handled in separate story, but session creation triggers it)",
+        "Tests verify session creation and single-active constraint"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-010",
+      "title": "Active session screen — Waterline indicator",
+      "description": "As a user, I want to see my current Waterline balance prominently during a session.",
+      "acceptanceCriteria": [
+        "Waterline indicator displays as a vertical gauge/bar with a center line representing \"balanced\"",
+        "Indicator shows current `waterlineValue` visually: above center = over-paced, below center = buffered",
+        "Normal state: neutral/calm accent color",
+        "Warning state: when `waterlineValue >= warningThreshold`, indicator turns red/amber with text \"Drink water to return to center\"",
+        "Indicator animates smoothly when value changes",
+        "Verified in Simulator: indicator renders correctly at values -3, 0, 1, 2, 3, 5"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-011",
+      "title": "Active session screen — counters and reminder status",
+      "description": "As a user, I want to see my drink/water counts and when my next reminder is due.",
+      "acceptanceCriteria": [
+        "Display: total alcoholic drink count, total water count",
+        "Display: \"Water due in: X drinks\" (based on `alcoholCountSinceLastWater` vs `waterEveryNDrinks`)",
+        "Display: \"Next reminder: X:XX\" (countdown to next time-based reminder, if enabled)",
+        "Counters update immediately when a log is added",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-012",
+      "title": "Log alcoholic drink — full flow",
+      "description": "As a user, I want to log an alcoholic drink with type and size so the Waterline updates accurately.",
+      "acceptanceCriteria": [
+        "Drink type picker: beer, wine, liquor, cocktail",
+        "Size presets per type (e.g., beer: 12oz/16oz/pint; wine: 5oz/glass; liquor: 1.5oz/double 3oz; cocktail: standard/strong)",
+        "Each preset maps to a `standardDrinkEstimate` (Double) — e.g., 12oz beer = 1.0, double whiskey = 2.0",
+        "User can see and optionally adjust the `standardDrinkEstimate` before confirming",
+        "On confirm: `LogEntry` created with `type: .alcohol`, `alcoholMeta` populated, `source: .phone`",
+        "Waterline value increases by `standardDrinkEstimate` (rounded or fractional as stored)",
+        "`alcoholCountSinceLastWater` incremented by 1",
+        "If `alcoholCountSinceLastWater >= waterEveryNDrinks`: trigger per-drink water reminder",
+        "If `waterlineValue >= warningThreshold`: show warning state",
+        "Log syncs to Convex in background",
+        "Tests verify Waterline calculation, reminder trigger, warning state"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-013",
+      "title": "Log water",
+      "description": "As a user, I want to log water quickly so the Waterline decreases.",
+      "acceptanceCriteria": [
+        "Quick \"+\" Water button on active session screen",
+        "Default amount from user settings (e.g., 8oz)",
+        "On tap: `LogEntry` created with `type: .water`, `waterMeta.amountOz` set, `source: .phone`",
+        "Waterline value decreases by 1",
+        "`alcoholCountSinceLastWater` resets to 0",
+        "If `waterlineValue` drops below `warningThreshold`: clear warning state",
+        "Log syncs to Convex in background",
+        "Tests verify Waterline calculation and state reset"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-014",
+      "title": "Quick-add buttons on active session",
+      "description": "As a user, I want prominent quick-add buttons for drink and water so logging takes <2 taps.",
+      "acceptanceCriteria": [
+        "Bottom of active session screen: two large tappable buttons — \"+ Drink\" and \"+ Water\"",
+        "\"+ Water\" immediately logs water with defaults (single tap)",
+        "\"+ Drink\" opens drink type/size picker (second tap to confirm)",
+        "Buttons are large enough for easy tapping (minimum 44pt tap target)",
+        "Haptic feedback on tap",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-015",
+      "title": "Drink presets — create and manage",
+      "description": "As a user, I want to save custom drink presets so I can log my regular drinks with one tap.",
+      "acceptanceCriteria": [
+        "Settings screen section: \"Quick Drinks\" / \"Presets\"",
+        "\"Add Preset\" flow: name, drink type, size, optional ABV, standardDrinkEstimate (user can set custom value)",
+        "Presets saved as `DrinkPreset` in SwiftData and synced to Convex",
+        "Presets appear as chips/buttons on active session screen above the quick-add buttons",
+        "Tapping a preset logs that drink immediately (single tap)",
+        "Edit and delete presets from settings",
+        "Tests verify preset CRUD and quick-log behavior"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-016",
+      "title": "Drink presets — default presets on first launch",
+      "description": "As a new user, I want sensible default presets so I can start logging immediately.",
+      "acceptanceCriteria": [
+        "On first launch after onboarding, create default presets: \"Beer\" (12oz, 1.0 std), \"Glass of Wine\" (5oz, 1.0 std), \"Shot\" (1.5oz, 1.0 std), \"Cocktail\" (1 std), \"Double\" (3oz, 2.0 std)",
+        "Defaults are editable and deletable by user",
+        "Tests verify default presets are created"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-017",
+      "title": "Edit and delete log entries",
+      "description": "As a user, I want to edit or delete a log entry if I made a mistake.",
+      "acceptanceCriteria": [
+        "In active session: swipe-to-delete or edit on log timeline",
+        "In session summary: same edit/delete capability",
+        "On edit/delete: Waterline and all counters recomputed from scratch by replaying all remaining logs in order",
+        "Edits sync to Convex",
+        "Tests verify recomputation is correct after delete and edit"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-018",
+      "title": "Time-based reminders",
+      "description": "As a user, I want periodic reminders to drink water during my session.",
+      "acceptanceCriteria": [
+        "When session starts and `timeRemindersEnabled` is true: schedule local notification repeating every `timeReminderIntervalMinutes`",
+        "Notification content: \"Time for water\" (calm, non-judgmental)",
+        "Notification actions: \"Log Water\" (logs water with defaults) and \"Dismiss\"",
+        "\"Log Water\" action creates a `LogEntry` and updates Waterline",
+        "Reminders stop when session ends",
+        "If session inactive (no logs) for 90 minutes, stop reminders",
+        "Tests verify scheduling and cancellation logic"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-019",
+      "title": "Per-drink water reminders",
+      "description": "As a user, I want a reminder to drink water after every N alcoholic drinks.",
+      "acceptanceCriteria": [
+        "When `alcoholCountSinceLastWater >= waterEveryNDrinks`: fire local notification",
+        "Notification content: \"You've had N drinks — time for water\"",
+        "Notification actions: \"Log Water\" and \"Dismiss\"",
+        "Reminder resets when water is logged (`alcoholCountSinceLastWater` → 0)",
+        "Tests verify trigger threshold and reset"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-020",
+      "title": "Pacing warning notification",
+      "description": "As a user, I want to be warned when my Waterline crosses the warning threshold.",
+      "acceptanceCriteria": [
+        "When `waterlineValue >= warningThreshold` and was previously below: fire local notification",
+        "Notification content: \"Your Waterline is high — drink water to return to center\"",
+        "Notification actions: \"Log Water\" and \"Dismiss\"",
+        "Only fires once per threshold crossing (not on every drink while above)",
+        "Tests verify threshold crossing detection"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-021",
+      "title": "End session",
+      "description": "As a user, I want to end my session and see a summary.",
+      "acceptanceCriteria": [
+        "\"End Session\" button on active session screen (with confirmation dialog: \"End this session?\")",
+        "Sets `endTime`, `isActive = false`",
+        "Computes summary: total drinks, total water, total standard drinks, session duration, pacing adherence (% of times water was logged within the N-drink rule)",
+        "Stores summary in `Session.computedSummary`",
+        "Cancels all active reminders",
+        "Ends Live Activity",
+        "Syncs to Convex",
+        "Navigates to Summary screen",
+        "Force-end works with zero logs",
+        "Tests verify summary computation"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-022",
+      "title": "Session summary screen",
+      "description": "As a user, I want to review my session after it ends.",
+      "acceptanceCriteria": [
+        "Displays: total alcoholic drinks (count + standard drink total), total water entries (count + total volume), session duration, pacing adherence percentage",
+        "Timeline list: chronological log entries with timestamps, type icons, and details",
+        "Edit/delete log entries from summary (recomputes summary)",
+        "Final Waterline value displayed",
+        "\"Done\" button returns to Home",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-023",
+      "title": "Past sessions list",
+      "description": "As a user, I want to view my past sessions so I can track my patterns.",
+      "acceptanceCriteria": [
+        "Home screen shows last 5 sessions (date, duration, drink count, water count)",
+        "Tapping a session opens its summary screen (read-only, no edit in past sessions for MVP)",
+        "Empty state if no past sessions",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-024",
+      "title": "Settings screen",
+      "description": "As a user, I want to adjust my pacing preferences and manage my account.",
+      "acceptanceCriteria": [
+        "Sections: Reminders (time-based toggle + interval, per-drink N), Waterline (warning threshold), Defaults (water amount, units), Presets (manage quick drinks), Account (sign out, delete account)",
+        "Changes save immediately to SwiftData and sync to Convex",
+        "Delete account: removes all user data from SwiftData and Convex, signs out, returns to onboarding",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-025",
+      "title": "Abandoned session handling",
+      "description": "As a user, I want the app to handle sessions I forgot to end.",
+      "acceptanceCriteria": [
+        "If a session has been active for >12 hours: on next app launch, show prompt \"Your session has been running for X hours. End it?\"",
+        "Options: \"End Now\" (ends with current data) and \"Keep Going\" (session stays active)",
+        "Tests verify 12-hour threshold detection"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-026",
+      "title": "Offline-first logging and sync",
+      "description": "As a user, I want to log drinks even without internet and have them sync later.",
+      "acceptanceCriteria": [
+        "All log entries write to SwiftData first (immediate, no network required)",
+        "Background sync queue: pending changes sync to Convex when connectivity available",
+        "Conflict resolution: last-write-wins for edits",
+        "Sync status indicator (subtle, non-intrusive — e.g., small cloud icon)",
+        "Tests verify offline write and subsequent sync"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-027",
+      "title": "Apple Watch app — main screen with quick logging",
+      "description": "As a user, I want to log drinks and water from my Apple Watch with minimal interaction.",
+      "acceptanceCriteria": [
+        "watchOS app shows two large buttons: \"+ Drink\" and \"+ Water\" when session is active",
+        "\"+ Water\" logs immediately with defaults",
+        "\"+ Drink\" shows compact preset list, tapping one logs immediately",
+        "Compact Waterline indicator and counts (drinks/water) above buttons",
+        "If no active session: show \"Start Session\" button or \"No active session\" state",
+        "Watch communicates with phone via WatchConnectivity framework",
+        "Haptic confirmation on log",
+        "Verified in watchOS Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-028",
+      "title": "Apple Watch app — haptic nudges",
+      "description": "As a user, I want my watch to buzz when it's time to drink water.",
+      "acceptanceCriteria": [
+        "When phone fires a water reminder (time-based or per-drink), watch receives it and plays haptic",
+        "Haptic pattern: gentle, not alarming (e.g., `.notification` type)",
+        "Watch shows reminder notification with \"Log Water\" action",
+        "Tapping \"Log Water\" on watch logs water and sends to phone",
+        "Tests verify WatchConnectivity message handling"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-029",
+      "title": "Apple Watch app — end session from watch",
+      "description": "As a user, I want to end my session from the watch if my phone isn't handy.",
+      "acceptanceCriteria": [
+        "\"End Session\" option accessible from watch (e.g., scroll down or menu)",
+        "Confirmation prompt on watch",
+        "Ends session on phone via WatchConnectivity",
+        "Watch updates to \"no active session\" state",
+        "Verified in watchOS Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-030",
+      "title": "Lock Screen widget",
+      "description": "As a user, I want to glance at my Waterline status on my Lock Screen.",
+      "acceptanceCriteria": [
+        "Lock Screen widget (WidgetKit, accessory family)",
+        "Shows: simplified Waterline indicator, drink/water counts",
+        "If interactive (iOS 17+): \"+ Drink\" and \"+ Water\" buttons via App Intents",
+        "Tapping buttons logs with defaults without opening the app",
+        "Widget updates when logs are added (via WidgetKit timeline reload)",
+        "When no active session: shows \"No Session\" state",
+        "Verified in Simulator widget preview"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-031",
+      "title": "Home Screen widget",
+      "description": "As a user, I want a Home Screen widget to see session status and quick-log.",
+      "acceptanceCriteria": [
+        "Small widget: Waterline indicator + quick-add buttons",
+        "Medium widget: Waterline + counts + next reminder countdown",
+        "Large widget: Waterline + counts + recent 3 log entries + quick-add",
+        "Interactive buttons via App Intents (iOS 17+)",
+        "Widget timeline updates on log events",
+        "When no active session: shows \"Start Session\" or last session summary",
+        "Verified in Simulator widget preview"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-032",
+      "title": "Live Activity / Dynamic Island",
+      "description": "As a user, I want to see my session status in the Dynamic Island and Live Activity without opening the app.",
+      "acceptanceCriteria": [
+        "Live Activity starts when session starts",
+        "Displays: Waterline value, drink count, water count, next reminder countdown",
+        "Dynamic Island compact: Waterline indicator and counts",
+        "Dynamic Island expanded: Waterline + counts + quick actions",
+        "Quick actions via App Intents: \"+ Drink\" (logs default preset), \"+ Water\"",
+        "Updates in near-real-time when logs are added",
+        "Live Activity ends when session ends",
+        "Uses ActivityKit with proper `ActivityAttributes` and `ContentState`",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-033",
+      "title": "App Intents for interactive widgets and Live Activity",
+      "description": "As a developer, I want App Intents defined so that widgets and Live Activity can perform actions.",
+      "acceptanceCriteria": [
+        "`LogDrinkIntent`: logs an alcoholic drink (accepts optional preset ID, defaults to \"standard drink\" 1.0)",
+        "`LogWaterIntent`: logs water with default amount",
+        "`StartSessionIntent`: starts a new session",
+        "`EndSessionIntent`: ends the active session",
+        "Intents registered in App Intents extension",
+        "Intents work from widgets, Live Activity, and Siri",
+        "Tests verify intent execution and data creation"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-034",
+      "title": "Waterline algorithm — recompute engine",
+      "description": "As a developer, I want a reliable algorithm that recomputes Waterline state from logs so edits are always consistent.",
+      "acceptanceCriteria": [
+        "`WaterlineEngine` struct/class with method `computeState(from logs: [LogEntry]) -> WaterlineState`",
+        "`WaterlineState`: `waterlineValue` (Double), `alcoholCountSinceLastWater` (Int), `totalAlcoholCount` (Int), `totalWaterCount` (Int), `totalStandardDrinks` (Double), `isWarning` (Bool)",
+        "On alcohol log: `waterlineValue += standardDrinkEstimate`, `alcoholCountSinceLastWater += 1`",
+        "On water log: `waterlineValue -= 1`, `alcoholCountSinceLastWater = 0`",
+        "Warning: `waterlineValue >= warningThreshold`",
+        "Engine processes logs in timestamp order",
+        "Used everywhere state is needed (active session, summary, after edits)",
+        "Comprehensive tests: empty logs, alternating drinks/water, doubles, edits, warning threshold crossing"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-035",
+      "title": "Notification permission request during onboarding",
+      "description": "As a user, I want the app to explain why it needs notifications before asking permission.",
+      "acceptanceCriteria": [
+        "After configure-defaults screen: explanation screen \"Waterline sends gentle reminders to drink water during your session. Allow notifications to get pacing nudges.\"",
+        "\"Enable Notifications\" button triggers system permission prompt",
+        "\"Skip\" option — reminders will only work in-app",
+        "Permission result stored; if denied, reminders settings show \"Notifications disabled\" with link to Settings",
+        "Verified in Simulator"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    },
+    {
+      "id": "US-036",
+      "title": "Discreet notification content",
+      "description": "As a user, I want notification text that won't be embarrassing if someone sees my Lock Screen.",
+      "acceptanceCriteria": [
+        "Default notification content uses neutral language: \"Time for a break\" instead of \"You've had 5 drinks\"",
+        "No drink counts or alcohol references in notification preview text",
+        "Full detail visible only when notification is expanded or app is opened",
+        "Configurable in Settings: \"Discreet notifications\" toggle (on by default)",
+        "Tests verify notification content based on discreet setting"
+      ],
+      "priority": 4,
+      "passes": false,
+      "labels": [],
+      "dependsOn": []
+    }
+  ],
+  "metadata": {
+    "createdAt": "2026-02-13T02:42:19.830Z",
+    "version": "1.0.0",
+    "sourcePrd": "tasks/prd-waterline-mvp-ios-pacing-companion.md",
+    "updatedAt": "2026-02-13T03:04:12.158Z"
+  }
+}

@@ -1,0 +1,109 @@
+name: Waterline
+options:
+  bundleIdPrefix: com.waterline
+  deploymentTarget:
+    iOS: "17.0"
+    watchOS: "10.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: false
+    CODE_SIGNING_ALLOWED: false
+
+targets:
+  Waterline:
+    type: application
+    platform: iOS
+    sources:
+      - path: Waterline
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_EMIT_LOC_STRINGS: true
+    dependencies:
+      - target: WaterlineWidgets
+      - target: WaterlineIntents
+
+  WaterlineWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: WaterlineWatch
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.watchkitapp
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        GENERATE_INFOPLIST_FILE: true
+        SWIFT_EMIT_LOC_STRINGS: true
+    dependencies: []
+
+  WaterlineWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: WaterlineWidgets
+        excludes:
+          - "Info.plist"
+    info:
+      path: WaterlineWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: WaterlineWidgets
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.widgets
+        SWIFT_EMIT_LOC_STRINGS: true
+
+  WaterlineIntents:
+    type: extensionkit-extension
+    platform: iOS
+    sources:
+      - path: WaterlineIntents
+        excludes:
+          - "Info.plist"
+    info:
+      path: WaterlineIntents/Info.plist
+      properties:
+        CFBundleDisplayName: WaterlineIntents
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        EXAppExtensionAttributes:
+          EXExtensionPointIdentifier: com.apple.appintents-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.intents
+        SWIFT_EMIT_LOC_STRINGS: true
+
+  WaterlineTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: WaterlineTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.tests
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - target: Waterline
+
+schemes:
+  Waterline:
+    build:
+      targets:
+        Waterline: all
+        WaterlineTests: [test]
+    test:
+      targets:
+        - WaterlineTests
+    run:
+      config: Debug
