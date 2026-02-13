@@ -3,10 +3,10 @@
   "sessionId": "2d705256-c3af-4e70-a121-0d7ee2f2cf3e",
   "status": "running",
   "startedAt": "2026-02-13T04:27:16.554Z",
-  "updatedAt": "2026-02-13T04:31:13.204Z",
-  "currentIteration": 0,
+  "updatedAt": "2026-02-13T04:32:42.621Z",
+  "currentIteration": 1,
   "maxIterations": 10,
-  "tasksCompleted": 0,
+  "tasksCompleted": 1,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -83,8 +83,8 @@
       {
         "id": "US-012",
         "title": "Log alcoholic drink — full flow",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-013",
@@ -232,7 +232,18 @@
       }
     ]
   },
-  "iterations": [],
+  "iterations": [
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-012",
+      "taskTitle": "Log alcoholic drink — full flow",
+      "taskCompleted": true,
+      "durationMs": 211037,
+      "startedAt": "2026-02-13T04:27:42.164Z",
+      "endedAt": "2026-02-13T04:31:13.201Z"
+    }
+  ],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [],

@@ -262,3 +262,18 @@ after each iteration and it's included in prompts for context.
   - Sheet presentation works best when `.sheet(isPresented:)` is attached to the parent container (HStack) rather than individual buttons
 ---
 
+## 2026-02-12 - US-013
+- What was implemented:
+  - Water logging wired into both `ActiveSessionView` and `HomeView` "+ Water" quick-add buttons (previously stubs)
+  - `logWater(for:)` function creates `LogEntry` with `type: .water`, `waterMeta.amountOz` from `userSettings.defaultWaterAmountOz`, `source: .phone`, sets session relationship, inserts into SwiftData
+  - Waterline decrease (-1), `alcoholCountSinceLastWater` reset to 0, and warning state clearing all work automatically via existing computed properties that iterate `session.logEntries`
+  - Convex background sync deferred to US-026 (offline-first sync), consistent with prior stories
+- Files changed:
+  - `Waterline/ActiveSessionView.swift` (modified — wired water button, added `logWater(for:)`)
+  - `Waterline/HomeView.swift` (modified — wired water button, added `logWater(for:)`)
+- **Learnings:**
+  - Water logging is significantly simpler than drink logging (US-012) because it needs no picker/sheet — single tap creates the entry directly
+  - All reactive state updates (waterline value, counts, warning state, pacing counter) are already handled by existing computed properties over `session.logEntries` — adding a new `LogEntry` to SwiftData triggers `@Query` refresh automatically
+  - The `logWater` function is identical in both views — potential extraction to a shared helper when `WaterlineEngine` is built in US-034
+---
+

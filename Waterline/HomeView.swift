@@ -179,7 +179,7 @@ struct HomeView: View {
             .accessibilityLabel("Add Drink")
 
             Button {
-                // Water logging — implemented in US-013/US-014
+                logWater(for: session)
             } label: {
                 Label("Water", systemImage: "drop.fill")
                     .font(.headline)
@@ -195,6 +195,19 @@ struct HomeView: View {
                 checkPerDrinkReminder(for: session)
             }
         }
+    }
+
+    // MARK: - Log Water
+
+    private func logWater(for session: Session) {
+        let entry = LogEntry(
+            type: .water,
+            waterMeta: WaterMeta(amountOz: Double(userSettings.defaultWaterAmountOz)),
+            source: .phone
+        )
+        entry.session = session
+        modelContext.insert(entry)
+        try? modelContext.save()
     }
 
     // MARK: - Per-Drink Water Reminder
