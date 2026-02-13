@@ -3,10 +3,10 @@
   "sessionId": "2d705256-c3af-4e70-a121-0d7ee2f2cf3e",
   "status": "running",
   "startedAt": "2026-02-13T04:27:16.554Z",
-  "updatedAt": "2026-02-13T04:42:45.264Z",
-  "currentIteration": 5,
+  "updatedAt": "2026-02-13T04:47:16.784Z",
+  "currentIteration": 6,
   "maxIterations": 10,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -113,8 +113,8 @@
       {
         "id": "US-017",
         "title": "Edit and delete log entries",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-018",
@@ -282,6 +282,16 @@
       "durationMs": 90599,
       "startedAt": "2026-02-13T04:37:41.850Z",
       "endedAt": "2026-02-13T04:39:12.449Z"
+    },
+    {
+      "iteration": 6,
+      "status": "completed",
+      "taskId": "US-017",
+      "taskTitle": "Edit and delete log entries",
+      "taskCompleted": true,
+      "durationMs": 211671,
+      "startedAt": "2026-02-13T04:39:13.587Z",
+      "endedAt": "2026-02-13T04:42:45.258Z"
     }
   ],
   "skippedTaskIds": [],

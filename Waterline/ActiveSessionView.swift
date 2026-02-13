@@ -267,6 +267,8 @@ struct ActiveSessionView: View {
         modelContext.insert(entry)
         try? modelContext.save()
 
+        // Reset inactivity timer on activity
+        ReminderService.rescheduleInactivityCheck()
         checkPerDrinkReminder(for: session)
     }
 
@@ -302,6 +304,7 @@ struct ActiveSessionView: View {
         }
         .sheet(isPresented: $showingDrinkSheet) {
             LogDrinkView(session: session) {
+                ReminderService.rescheduleInactivityCheck()
                 checkPerDrinkReminder(for: session)
             }
         }
@@ -318,6 +321,9 @@ struct ActiveSessionView: View {
         entry.session = session
         modelContext.insert(entry)
         try? modelContext.save()
+
+        // Reset inactivity timer on activity
+        ReminderService.rescheduleInactivityCheck()
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -335,7 +341,7 @@ struct ActiveSessionView: View {
         content.title = "Time for water"
         content.body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
         content.sound = .default
-        content.categoryIdentifier = "WATER_REMINDER"
+        content.categoryIdentifier = ReminderService.categoryIdentifier
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
         let request = UNNotificationRequest(

@@ -45,6 +45,15 @@ after each iteration and it's included in prompts for context.
 - `NavigationPath` state enables programmatic push via `.append(uuid)` after session creation
 - All `NavigationLink(value: session.id)` throughout the view hierarchy share the same destination handler
 
+### Time-Based Reminder Pattern (ReminderService.swift)
+- `ReminderService` is a `static enum` (no instances) providing `scheduleTimeReminders()`, `cancelAllTimeReminders()`, `rescheduleInactivityCheck()`
+- Uses `UNTimeIntervalNotificationTrigger(repeats: true)` for recurring reminders at user-configured interval
+- Notification category `WATER_REMINDER` registered at app launch with "Log Water" and "Dismiss" actions — shared by both time-based and per-drink reminders
+- 90-minute inactivity auto-stop: a one-shot notification fires after 90 minutes; on delivery, `handleInactivityTimeout()` cancels all time reminders
+- Each log entry calls `rescheduleInactivityCheck()` to reset the 90-minute timer
+- `NotificationDelegate` handles "Log Water" action by fetching active session from `ModelContainer.mainContext` and creating a water `LogEntry`
+- `WaterlineApp` creates a shared `ModelContainer` and passes it to both the SwiftUI scene and `NotificationDelegate`
+
 ### Auth Pattern (AuthenticationManager.swift)
 - `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
 - Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
@@ -347,5 +356,29 @@ after each iteration and it's included in prompts for context.
   - `.sheet(item:, onDismiss:)` is the correct syntax for combining item-based presentation with dismiss callback — the trailing closure variant `{ _ in }` doesn't compile
   - Timeline in active session uses reverse-chronological (newest first) for quick glance at recent entries; summary uses chronological (oldest first) for narrative review
   - `List` with `.frame(maxHeight:)` inside a `VStack` creates a bounded scrollable timeline without taking over the full screen
+---
+
+## 2026-02-12 - US-018
+- What was implemented:
+  - `ReminderService` (new): centralized enum with static methods for scheduling/canceling time-based reminders, registering notification categories, and 90-minute inactivity detection
+  - `NotificationDelegate` (new): `UNUserNotificationCenterDelegate` handling "Log Water" action from notifications — creates water `LogEntry` in active session via shared `ModelContainer`
+  - `WaterlineApp` updated: creates shared `ModelContainer`, registers notification category at launch, sets `NotificationDelegate` as delegate with container reference
+  - `HomeView.startSession()` updated: schedules time-based reminders when `timeRemindersEnabled` is true using `ReminderService.scheduleTimeReminders()`
+  - All log entry functions in `ActiveSessionView` and `HomeView` (logWater, logPreset, LogDrinkView onLogged) call `ReminderService.rescheduleInactivityCheck()` to reset the 90-minute inactivity timer
+  - Per-drink reminder `categoryIdentifier` updated from hardcoded `"WATER_REMINDER"` to `ReminderService.categoryIdentifier` for shared action handling
+  - `cancelAllTimeReminders()` is available for US-021 (End Session) to call when session ends
+- Files changed:
+  - `Waterline/ReminderService.swift` (new) — time-based reminder scheduling, cancellation, inactivity detection
+  - `Waterline/NotificationDelegate.swift` (new) — notification action handling, "Log Water" creates LogEntry
+  - `Waterline/WaterlineApp.swift` (modified — shared ModelContainer, category registration, delegate setup)
+  - `Waterline/HomeView.swift` (modified — schedule reminders on session start, inactivity reschedule on logs, shared category identifier)
+  - `Waterline/ActiveSessionView.swift` (modified — inactivity reschedule on logs, shared category identifier)
+- **Learnings:**
+  - `UNTimeIntervalNotificationTrigger(repeats: true)` is the simplest way to schedule recurring notifications — iOS handles the repeat loop, no manual rescheduling needed
+  - `UNNotificationCategory` must be registered with `setNotificationCategories` at app launch (before any notifications fire) — it replaces all existing categories, so all categories must be in one call
+  - For the `NotificationDelegate` to create `LogEntry` objects, it needs access to the `ModelContainer` — passing it from `WaterlineApp.init()` is cleaner than creating a second container
+  - `WaterlineApp` can't use `.modelContainer()` scene modifier AND access the container in `init()` simultaneously — solution is to create the container in `init()` and pass it to `.modelContainer(sharedModelContainer)` explicitly
+  - 90-minute inactivity detection uses a scheduled notification as a timer rather than in-process `Timer` — this works even when the app is backgrounded or killed
+  - `nonisolated` on `UNUserNotificationCenterDelegate` methods is required in Swift 6 strict concurrency when the class is `@MainActor` — the delegate methods are called from the notification system's thread
 ---
 
