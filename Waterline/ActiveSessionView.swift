@@ -270,6 +270,7 @@ struct ActiveSessionView: View {
         // Reset inactivity timer on activity
         ReminderService.rescheduleInactivityCheck()
         checkPerDrinkReminder(for: session)
+        checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
     }
 
     // MARK: - Quick Add Buttons
@@ -303,9 +304,10 @@ struct ActiveSessionView: View {
             .accessibilityLabel("Add Water")
         }
         .sheet(isPresented: $showingDrinkSheet) {
-            LogDrinkView(session: session) {
+            LogDrinkView(session: session) { estimate in
                 ReminderService.rescheduleInactivityCheck()
                 checkPerDrinkReminder(for: session)
+                checkPacingWarning(for: session, addedEstimate: estimate)
             }
         }
     }
@@ -333,6 +335,19 @@ struct ActiveSessionView: View {
         let waterEveryN = userSettings.waterEveryNDrinks
         if sinceLastWater >= waterEveryN {
             schedulePerDrinkWaterReminder(drinkCount: sinceLastWater)
+        }
+    }
+
+    // MARK: - Pacing Warning
+
+    /// Checks if the waterline just crossed the warning threshold after logging a drink.
+    /// Fires a notification only once per crossing (was below, now at/above).
+    private func checkPacingWarning(for session: Session, addedEstimate: Double) {
+        let currentValue = waterlineValue(for: session)
+        let previousValue = currentValue - addedEstimate
+        let threshold = Double(warningThreshold)
+        if previousValue < threshold && currentValue >= threshold {
+            ReminderService.schedulePacingWarning()
         }
     }
 

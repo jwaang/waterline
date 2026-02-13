@@ -127,4 +127,25 @@ enum ReminderService {
     static func handleInactivityTimeout() {
         cancelAllTimeReminders()
     }
+
+    // MARK: - Pacing Warning
+
+    /// Fires a pacing warning notification when waterline crosses the warning threshold.
+    /// Only call when `previousValue < threshold` and `newValue >= threshold` to ensure
+    /// the notification fires once per crossing.
+    static func schedulePacingWarning() {
+        let content = UNMutableNotificationContent()
+        content.title = "Waterline is high"
+        content.body = "Your Waterline is high — drink water to return to center"
+        content.sound = .default
+        content.categoryIdentifier = categoryIdentifier
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "pacingWarning-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        UNUserNotificationCenter.current().add(request)
+    }
 }

@@ -54,6 +54,13 @@ after each iteration and it's included in prompts for context.
 - `NotificationDelegate` handles "Log Water" action by fetching active session from `ModelContainer.mainContext` and creating a water `LogEntry`
 - `WaterlineApp` creates a shared `ModelContainer` and passes it to both the SwiftUI scene and `NotificationDelegate`
 
+### Pacing Warning Pattern (ReminderService.swift)
+- `ReminderService.schedulePacingWarning()` fires an immediate notification when waterline crosses `warningThreshold`
+- Threshold crossing detection: `previousValue = currentValue - addedEstimate`; fire only when `previousValue < threshold && currentValue >= threshold`
+- Called from `checkPacingWarning(for:addedEstimate:)` in both `ActiveSessionView` and `HomeView` after any drink log
+- Reuses `WATER_REMINDER` category — no separate category needed for pacing warnings
+- `LogDrinkView.onLogged` signature is `(Double) -> Void` — passes `adjustedEstimate` for downstream threshold checks
+
 ### Auth Pattern (AuthenticationManager.swift)
 - `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
 - Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
@@ -380,5 +387,24 @@ after each iteration and it's included in prompts for context.
   - `WaterlineApp` can't use `.modelContainer()` scene modifier AND access the container in `init()` simultaneously — solution is to create the container in `init()` and pass it to `.modelContainer(sharedModelContainer)` explicitly
   - 90-minute inactivity detection uses a scheduled notification as a timer rather than in-process `Timer` — this works even when the app is backgrounded or killed
   - `nonisolated` on `UNUserNotificationCenterDelegate` methods is required in Swift 6 strict concurrency when the class is `@MainActor` — the delegate methods are called from the notification system's thread
+---
+
+## 2026-02-13 - US-020
+- What was implemented:
+  - Pacing warning notification: fires a local notification when waterline value crosses the `warningThreshold` upward (was below, now at or above)
+  - `ReminderService.schedulePacingWarning()` — new static method that fires an immediate notification with title "Waterline is high" and body "Your Waterline is high — drink water to return to center", reusing the shared `WATER_REMINDER` category with "Log Water" and "Dismiss" actions
+  - `checkPacingWarning(for:addedEstimate:)` — new function in both `ActiveSessionView` and `HomeView` that computes waterline before the drink (current minus just-added estimate) and after (current), comparing against `warningThreshold` to detect threshold crossing
+  - Wired into all three drink logging paths in both views: preset chip tap (`logPreset`), drink sheet confirmation (`LogDrinkView.onLogged` callback), and `LogDrinkView` callback now passes `standardDrinkEstimate` via `(Double) -> Void` signature
+  - Only fires once per threshold crossing — subsequent drinks while already above threshold do not re-trigger
+- Files changed:
+  - `Waterline/ReminderService.swift` (modified — added `schedulePacingWarning()` static method)
+  - `Waterline/ActiveSessionView.swift` (modified — added `checkPacingWarning()`, wired into `logPreset` and `LogDrinkView` callback)
+  - `Waterline/HomeView.swift` (modified — added `checkPacingWarning()`, wired into `logPreset` and `LogDrinkView` callback)
+  - `Waterline/LogDrinkView.swift` (modified — changed `onLogged` from `() -> Void` to `(Double) -> Void` to pass `adjustedEstimate`)
+- **Learnings:**
+  - Threshold crossing detection requires knowing the waterline value before and after the drink log. Since the entry is already inserted when the callback fires, computing `previousValue = currentValue - addedEstimate` is the cleanest approach — no need to reorder insertion logic
+  - Changing `LogDrinkView.onLogged` from `() -> Void` to `(Double) -> Void` is a minimal API change that enables all callers to receive the logged estimate for downstream checks (pacing warning, future analytics)
+  - The pacing warning notification reuses the existing `WATER_REMINDER` category, so "Log Water" action handling in `NotificationDelegate` works automatically — no new category registration needed
+  - Using unique `UUID().uuidString` suffixed identifiers for pacing warning notifications prevents the system from deduplicating multiple warnings across different sessions
 ---
 

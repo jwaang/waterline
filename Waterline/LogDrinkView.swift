@@ -42,7 +42,7 @@ enum DrinkSizePresets {
 
 struct LogDrinkView: View {
     let session: Session
-    let onLogged: () -> Void
+    let onLogged: (Double) -> Void
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -212,7 +212,7 @@ struct LogDrinkView: View {
         modelContext.insert(entry)
         try? modelContext.save()
 
-        onLogged()
+        onLogged(adjustedEstimate)
         dismiss()
     }
 }
@@ -236,6 +236,6 @@ extension DrinkType {
     let session = Session()
     container.mainContext.insert(session)
 
-    return LogDrinkView(session: session, onLogged: {})
+    return LogDrinkView(session: session, onLogged: { _ in })
         .modelContainer(container)
 }
