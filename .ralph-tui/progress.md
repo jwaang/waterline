@@ -24,6 +24,14 @@ after each iteration and it's included in prompts for context.
 - Tests use Swift Testing framework (`@Test`, `@Suite`, `#expect`)
 - Test target `WaterlineTests` depends on `Waterline` target
 
+### Auth Pattern (AuthenticationManager.swift)
+- `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
+- Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
+- `KeychainStore` is the production implementation; `InMemoryCredentialStore` for unit tests
+- Auth flow: `SignInWithAppleButton` → `handleAuthorization()` → Keychain + SwiftData + Convex sync
+- `restoreSession()` called on app launch to hydrate from Keychain
+- Convex sync is fire-and-forget (non-fatal failure) — local SwiftData is authoritative
+
 ---
 
 ## Feb 12, 2026 - US-003
@@ -45,5 +53,26 @@ after each iteration and it's included in prompts for context.
   - Convex HTTP API uses POST to `/api/query` and `/api/mutation` with `{path, args, format}` body
   - ConvexService uses `actor` isolation for thread safety — tests accessing properties need `await`
   - `ConvexNull` pattern handles void mutation returns cleanly with forced cast `ConvexNull() as! T`
+---
+
+## Feb 12, 2026 - US-004
+- What was implemented:
+  - `AuthenticationManager` (`@Observable @MainActor`) managing Sign in with Apple flow, Keychain persistence, local user creation, and Convex sync
+  - `AuthCredentialStore` protocol with `KeychainStore` (production) and `InMemoryCredentialStore` (tests) — injectable for testability
+  - `SignInView` with `SignInWithAppleButton`, error alert with retry
+  - `RootView` routing between `SignInView` / `ContentView` based on `AuthState`
+  - `WaterlineApp` wired to create `AuthenticationManager` and call `restoreSession()` on appear
+  - 14 new tests: AuthState equality/hashable, initialization, session restore (empty/populated), sign out, credential store CRUD, local user creation and dedup
+- Files changed:
+  - `Waterline/AuthenticationManager.swift` (new)
+  - `Waterline/SignInView.swift` (new)
+  - `Waterline/ContentView.swift` (modified — added `RootView`, kept `ContentView`)
+  - `Waterline/WaterlineApp.swift` (modified — added `AuthenticationManager` state, `RootView`)
+  - `WaterlineTests/WaterlineTests.swift` (added 14 auth tests)
+- **Learnings:**
+  - Keychain APIs (`SecItemAdd`/`SecItemCopyMatching`) don't work in the Xcode test runner sandbox — must inject storage via protocol
+  - `@Observable @MainActor` class works well for auth state that drives SwiftUI view transitions
+  - `ASAuthorizationAppleIDCredential` can't be easily mocked — test the state management layer separately from the Apple credential handling
+  - Swift 6 strict concurrency: `InMemoryCredentialStore` needs `@unchecked Sendable` since it has mutable state accessed synchronously in tests
 ---
 

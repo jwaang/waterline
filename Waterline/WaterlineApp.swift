@@ -3,9 +3,14 @@ import SwiftData
 
 @main
 struct WaterlineApp: App {
+    @State private var authManager = AuthenticationManager()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView(authManager: authManager)
+                .onAppear {
+                    authManager.restoreSession()
+                }
         }
         .modelContainer(for: [
             User.self,

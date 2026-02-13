@@ -724,3 +724,204 @@ struct ConvexErrorTests {
         }
     }
 }
+
+// MARK: - AuthenticationManager Tests
+
+@Suite("AuthState")
+struct AuthStateTests {
+    @Test("AuthState equality")
+    func equality() {
+        let a = AuthenticationManager.AuthState.signedIn(appleUserId: "abc")
+        let b = AuthenticationManager.AuthState.signedIn(appleUserId: "abc")
+        let c = AuthenticationManager.AuthState.signedIn(appleUserId: "xyz")
+        #expect(a == b)
+        #expect(a != c)
+        #expect(AuthenticationManager.AuthState.signedOut == AuthenticationManager.AuthState.signedOut)
+        #expect(AuthenticationManager.AuthState.unknown == AuthenticationManager.AuthState.unknown)
+        #expect(AuthenticationManager.AuthState.unknown != AuthenticationManager.AuthState.signedOut)
+    }
+
+    @Test("AuthState hashable")
+    func hashable() {
+        let states: Set<AuthenticationManager.AuthState> = [
+            .unknown, .signedOut, .signedIn(appleUserId: "a"), .signedIn(appleUserId: "b"),
+        ]
+        #expect(states.count == 4)
+    }
+}
+
+@Suite("AuthenticationManager Initialization")
+struct AuthenticationManagerInitTests {
+    @MainActor
+    @Test("Manager starts in unknown state")
+    func initialState() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        #expect(manager.authState == .unknown)
+        #expect(manager.isSignedIn == false)
+        #expect(manager.currentAppleUserId == nil)
+        #expect(manager.errorMessage == nil)
+        #expect(manager.isLoading == false)
+    }
+
+    @MainActor
+    @Test("isSignedIn returns false when signed out")
+    func isSignedInComputed() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+        #expect(manager.isSignedIn == false)
+        #expect(manager.currentAppleUserId == nil)
+    }
+
+    @MainActor
+    @Test("Dismiss error clears error message")
+    func dismissError() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        manager.dismissError()
+        #expect(manager.errorMessage == nil)
+    }
+}
+
+@Suite("AuthenticationManager Session Restore")
+struct AuthManagerRestoreTests {
+    @MainActor
+    @Test("Restore with no stored data sets signedOut")
+    func restoreNoData() {
+        let store = InMemoryCredentialStore()
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+        #expect(manager.authState == .signedOut)
+        #expect(manager.isSignedIn == false)
+    }
+
+    @MainActor
+    @Test("Restore with stored data sets signedIn")
+    func restoreWithData() {
+        let store = InMemoryCredentialStore()
+        let testId = "test-apple-user-\(UUID().uuidString)"
+        store.save(key: "com.waterline.appleUserId", value: testId)
+
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+        #expect(manager.authState == .signedIn(appleUserId: testId))
+        #expect(manager.isSignedIn == true)
+        #expect(manager.currentAppleUserId == testId)
+    }
+}
+
+@Suite("AuthenticationManager Sign Out")
+struct AuthManagerSignOutTests {
+    @MainActor
+    @Test("Sign out clears store and state")
+    func signOut() {
+        let store = InMemoryCredentialStore()
+        let testId = "signout-test-\(UUID().uuidString)"
+        store.save(key: "com.waterline.appleUserId", value: testId)
+
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+        #expect(manager.isSignedIn == true)
+
+        manager.signOut()
+        #expect(manager.authState == .signedOut)
+        #expect(manager.isSignedIn == false)
+        #expect(manager.currentAppleUserId == nil)
+
+        // Verify store was cleared
+        let stored = store.read(key: "com.waterline.appleUserId")
+        #expect(stored == nil)
+    }
+}
+
+@Suite("InMemoryCredentialStore")
+struct InMemoryCredentialStoreTests {
+    @Test("Save and read value")
+    func saveAndRead() {
+        let store = InMemoryCredentialStore()
+        store.save(key: "test-key", value: "hello-world")
+        let result = store.read(key: "test-key")
+        #expect(result == "hello-world")
+    }
+
+    @Test("Read nonexistent key returns nil")
+    func readMissing() {
+        let store = InMemoryCredentialStore()
+        let result = store.read(key: "nonexistent")
+        #expect(result == nil)
+    }
+
+    @Test("Delete removes value")
+    func deleteValue() {
+        let store = InMemoryCredentialStore()
+        store.save(key: "to-delete", value: "value")
+        store.delete(key: "to-delete")
+        let result = store.read(key: "to-delete")
+        #expect(result == nil)
+    }
+
+    @Test("Save overwrites existing value")
+    func overwrite() {
+        let store = InMemoryCredentialStore()
+        store.save(key: "key", value: "first")
+        store.save(key: "key", value: "second")
+        let result = store.read(key: "key")
+        #expect(result == "second")
+    }
+}
+
+@Suite("Local User Creation on Auth")
+struct AuthLocalUserTests {
+    @MainActor
+    @Test("Local user created when not exists")
+    func createsLocalUser() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        // Verify no users exist
+        let before = try context.fetch(FetchDescriptor<User>())
+        #expect(before.isEmpty)
+
+        // Simulate what processCredential does for local user creation
+        let appleUserId = "test-local-user-\(UUID().uuidString)"
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.appleUserId == appleUserId }
+        )
+        let existing = try context.fetch(descriptor)
+        #expect(existing.isEmpty)
+
+        let user = User(appleUserId: appleUserId)
+        context.insert(user)
+        try context.save()
+
+        let after = try context.fetch(FetchDescriptor<User>())
+        #expect(after.count == 1)
+        #expect(after[0].appleUserId == appleUserId)
+        #expect(after[0].settings == UserSettings())
+    }
+
+    @MainActor
+    @Test("Duplicate user not created on re-auth")
+    func noDuplicateUser() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let appleUserId = "test-no-dup-\(UUID().uuidString)"
+
+        // Create user first time
+        let user = User(appleUserId: appleUserId)
+        context.insert(user)
+        try context.save()
+
+        // Simulate second auth — check before inserting
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.appleUserId == appleUserId }
+        )
+        let existing = try context.fetch(descriptor)
+        #expect(!existing.isEmpty) // user exists, so no insert
+
+        let allUsers = try context.fetch(FetchDescriptor<User>())
+        #expect(allUsers.count == 1)
+    }
+}
