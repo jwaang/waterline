@@ -291,3 +291,26 @@ after each iteration and it's included in prompts for context.
   - `UIImpactFeedbackGenerator(style: .medium)` is appropriate for confirmation actions like logging; `.light` would be too subtle, `.heavy` too aggressive
 ---
 
+## 2026-02-12 - US-015
+- What was implemented:
+  - `PresetsListView` — settings screen section "Quick Drinks" with list of presets, swipe-to-delete, tap-to-edit, and "+" toolbar button for adding new presets
+  - `AddEditPresetView` — form for creating/editing presets with name, drink type (segmented picker), size (oz), optional ABV, and adjustable standardDrinkEstimate (+/- 0.5, range 0.5-5.0)
+  - Presets saved as `DrinkPreset` in SwiftData with user relationship; Convex sync deferred to US-026 (offline-first sync) consistent with existing patterns
+  - Preset chips displayed as horizontally-scrollable capsule buttons on both `ActiveSessionView` and `HomeView` above the quick-add buttons
+  - Single-tap preset logging: tapping a chip immediately creates a `LogEntry` with full `AlcoholMeta` (including `presetId`) and triggers per-drink water reminder check
+  - Settings gear button in `HomeView` toolbar wired to navigate to `PresetsListView` (will be replaced by full `SettingsView` in US-024)
+  - Haptic feedback on preset chip tap, consistent with quick-add button pattern
+- Files changed:
+  - `Waterline/AddEditPresetView.swift` (new) — preset create/edit form
+  - `Waterline/PresetsListView.swift` (new) — presets list with CRUD operations
+  - `Waterline/ActiveSessionView.swift` (modified — added `@Query` for presets, preset chips section, `logPreset()`)
+  - `Waterline/HomeView.swift` (modified — added `@Query` for presets, preset chips section, `logPreset()`, settings navigation)
+- **Learnings:**
+  - `@Query private var presets: [DrinkPreset]` without a filter fetches all presets — works because presets are per-user and the app is single-user; multi-user would need a user filter
+  - `ScrollView(.horizontal, showsIndicators: false)` with `HStack` is the standard pattern for horizontally-scrollable chip rows in SwiftUI
+  - `Capsule().fill()` + `Capsule().strokeBorder()` layered via `.background()` + `.overlay()` creates clean chip styling without complex Shape composition
+  - `.sheet(item: $presetToEdit)` with `DrinkPreset` works because `@Model` classes conform to `Identifiable` — enables edit-on-tap without manual id tracking
+  - `logPreset()` mirrors the existing `logDrink()` pattern but populates `AlcoholMeta.presetId` to link the log entry back to its source preset for future analytics
+  - Settings gear button uses `NavigationLink` (destination-based) instead of `Button` + programmatic navigation — simpler and avoids needing additional state management
+---
+

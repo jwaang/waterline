@@ -8,6 +8,7 @@ struct ActiveSessionView: View {
 
     @Query private var sessions: [Session]
     @Query private var users: [User]
+    @Query private var presets: [DrinkPreset]
     @Environment(\.modelContext) private var modelContext
 
     @State private var now = Date()
@@ -48,6 +49,10 @@ struct ActiveSessionView: View {
             countsSection(for: session)
 
             reminderStatusSection(for: session)
+
+            if !presets.isEmpty {
+                presetChips(for: session)
+            }
 
             quickAddButtons(for: session)
 
@@ -168,6 +173,63 @@ struct ActiveSessionView: View {
     private func waterCount(for session: Session) -> Int {
         session.logEntries.filter { $0.type == .water }.count
     }
+
+    // MARK: - Preset Chips
+
+    private func presetChips(for session: Session) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(presets) { preset in
+                    Button {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        logPreset(preset, for: session)
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(preset.name)
+                                .font(.subheadline.weight(.medium))
+                            Text("\(preset.standardDrinkEstimate, specifier: "%.1f") std")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange.opacity(0.15))
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.orange.opacity(0.4), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(preset.name), \(preset.standardDrinkEstimate) standard drinks")
+                }
+            }
+        }
+    }
+
+    private func logPreset(_ preset: DrinkPreset, for session: Session) {
+        let entry = LogEntry(
+            timestamp: Date(),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(
+                drinkType: preset.drinkType,
+                sizeOz: preset.sizeOz,
+                abv: preset.abv,
+                standardDrinkEstimate: preset.standardDrinkEstimate,
+                presetId: preset.id
+            ),
+            source: .phone
+        )
+        entry.session = session
+        modelContext.insert(entry)
+        try? modelContext.save()
+
+        checkPerDrinkReminder(for: session)
+    }
+
+    // MARK: - Quick Add Buttons
 
     private func quickAddButtons(for session: Session) -> some View {
         HStack(spacing: 16) {

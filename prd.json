@@ -259,9 +259,10 @@
         "Edit and delete presets from settings"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-016",
@@ -610,6 +611,6 @@
     "createdAt": "2026-02-13T04:17:18.073Z",
     "version": "1.0.0",
     "sourcePrd": "tasks/prd-waterline-mvp-ios-pacing-companion.md",
-    "updatedAt": "2026-02-13T04:34:02.464Z"
+    "updatedAt": "2026-02-13T04:37:40.699Z"
   }
 }
