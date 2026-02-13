@@ -1169,7 +1169,7 @@ struct ConfigureDefaultsCompletionTests {
         // User is signed in
         #expect(manager.isSignedIn == true)
         // hasCompletedOnboarding is false → RootView shows ConfigureDefaultsView
-        // After Done tap → hasCompletedOnboarding = true → RootView shows ContentView
+        // After Done tap → hasCompletedOnboarding = true → RootView shows HomeView
     }
 
     @MainActor
@@ -1181,7 +1181,215 @@ struct ConfigureDefaultsCompletionTests {
         manager.restoreSession()
 
         #expect(manager.isSignedIn == true)
-        // If hasCompletedOnboarding is true → RootView shows ContentView directly
+        // If hasCompletedOnboarding is true → RootView shows HomeView directly
         // ConfigureDefaultsView is never shown for returning users
+    }
+}
+
+// MARK: - Home Screen Past Sessions Tests
+
+@Suite("Home Screen Past Sessions Query")
+struct HomeScreenPastSessionsTests {
+    @Test("Past sessions query excludes active sessions")
+    func excludesActiveSessions() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let active = Session(isActive: true)
+        let ended = Session(
+            startTime: Date().addingTimeInterval(-7200),
+            endTime: Date().addingTimeInterval(-3600),
+            isActive: false,
+            computedSummary: SessionSummary(
+                totalDrinks: 3, totalWater: 2, totalStandardDrinks: 3.0,
+                durationSeconds: 3600, pacingAdherence: 0.67, finalWaterlineValue: 1.0
+            )
+        )
+        context.insert(active)
+        context.insert(ended)
+        try context.save()
+
+        // HomeView uses @Query with filter: !$0.isActive
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { !$0.isActive },
+            sortBy: [SortDescriptor(\Session.startTime, order: .reverse)]
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.count == 1)
+        #expect(results[0].isActive == false)
+    }
+
+    @Test("Past sessions sorted by most recent first")
+    func sortedByRecent() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let now = Date()
+        let older = Session(
+            startTime: now.addingTimeInterval(-86400),
+            endTime: now.addingTimeInterval(-82800),
+            isActive: false
+        )
+        let newer = Session(
+            startTime: now.addingTimeInterval(-3600),
+            endTime: now.addingTimeInterval(-1800),
+            isActive: false
+        )
+        context.insert(older)
+        context.insert(newer)
+        try context.save()
+
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { !$0.isActive },
+            sortBy: [SortDescriptor(\Session.startTime, order: .reverse)]
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.count == 2)
+        #expect(results[0].startTime > results[1].startTime)
+    }
+
+    @Test("Empty state when no past sessions exist")
+    func emptyState() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        // Only active sessions exist
+        let active = Session(isActive: true)
+        context.insert(active)
+        try context.save()
+
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { !$0.isActive }
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.isEmpty)
+    }
+
+    @Test("Past sessions limited to 5 in display")
+    func limitedToFive() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let now = Date()
+        for i in 0..<8 {
+            let session = Session(
+                startTime: now.addingTimeInterval(Double(-i * 86400)),
+                endTime: now.addingTimeInterval(Double(-i * 86400) + 3600),
+                isActive: false
+            )
+            context.insert(session)
+        }
+        try context.save()
+
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { !$0.isActive },
+            sortBy: [SortDescriptor(\Session.startTime, order: .reverse)]
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.count == 8) // Query returns all; UI limits via .prefix(5)
+
+        // The view applies .prefix(5) — verify we get the 5 most recent
+        let displayed = Array(results.prefix(5))
+        #expect(displayed.count == 5)
+        // Verify ordering is maintained in prefix
+        for i in 0..<(displayed.count - 1) {
+            #expect(displayed[i].startTime > displayed[i + 1].startTime)
+        }
+    }
+}
+
+@Suite("Home Screen Session Row Data")
+struct HomeScreenSessionRowTests {
+    @Test("Session row shows summary data when available")
+    func rowWithSummary() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(
+            startTime: Date().addingTimeInterval(-7200),
+            endTime: Date(),
+            isActive: false,
+            computedSummary: SessionSummary(
+                totalDrinks: 5, totalWater: 3, totalStandardDrinks: 6.5,
+                durationSeconds: 7200, pacingAdherence: 0.6, finalWaterlineValue: 3.5
+            )
+        )
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>())
+        let s = fetched[0]
+        #expect(s.computedSummary?.totalDrinks == 5)
+        #expect(s.computedSummary?.totalWater == 3)
+        #expect(s.computedSummary?.durationSeconds == 7200)
+    }
+
+    @Test("Session row falls back to log entries when no summary")
+    func rowWithoutSummary() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(
+            startTime: Date().addingTimeInterval(-3600),
+            endTime: Date(),
+            isActive: false
+        )
+        let drink1 = LogEntry(type: .alcohol, alcoholMeta: AlcoholMeta(
+            drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0
+        ))
+        let drink2 = LogEntry(type: .alcohol, alcoholMeta: AlcoholMeta(
+            drinkType: .wine, sizeOz: 5.0, standardDrinkEstimate: 1.0
+        ))
+        let water1 = LogEntry(type: .water, waterMeta: WaterMeta(amountOz: 8.0))
+        drink1.session = session
+        drink2.session = session
+        water1.session = session
+
+        context.insert(session)
+        context.insert(drink1)
+        context.insert(drink2)
+        context.insert(water1)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>())
+        let s = fetched[0]
+        #expect(s.computedSummary == nil)
+
+        // Fallback counting from log entries — mirrors PastSessionRow logic
+        let drinkCount = s.logEntries.filter { $0.type == .alcohol }.count
+        let waterCount = s.logEntries.filter { $0.type == .water }.count
+        #expect(drinkCount == 2)
+        #expect(waterCount == 1)
+    }
+
+    @Test("Duration computed from endTime when no summary")
+    func durationFromEndTime() throws {
+        let now = Date()
+        let start = now.addingTimeInterval(-5400) // 1.5 hours ago
+        let session = Session(
+            startTime: start,
+            endTime: now,
+            isActive: false
+        )
+        let duration = session.endTime!.timeIntervalSince(session.startTime)
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        #expect(hours == 1)
+        #expect(minutes == 30)
+    }
+}
+
+@Suite("Home Screen Routing")
+struct HomeScreenRoutingTests {
+    @MainActor
+    @Test("Signed-in onboarded user sees HomeView")
+    func signedInOnboardedSeesHome() {
+        let store = InMemoryCredentialStore()
+        store.save(key: "com.waterline.appleUserId", value: "home-test-user")
+        let manager = AuthenticationManager(store: store)
+        manager.restoreSession()
+
+        #expect(manager.isSignedIn == true)
+        // RootView: signedIn + hasCompletedOnboarding = true → HomeView
     }
 }

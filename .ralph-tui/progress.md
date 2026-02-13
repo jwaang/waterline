@@ -24,6 +24,12 @@ after each iteration and it's included in prompts for context.
 - Tests use Swift Testing framework (`@Test`, `@Suite`, `#expect`)
 - Test target `WaterlineTests` depends on `Waterline` target
 
+### Home Screen Navigation Pattern (HomeView.swift)
+- `HomeView` uses `@Query` with `#Predicate { !$0.isActive }` and `SortDescriptor(\Session.startTime, order: .reverse)` to fetch past sessions
+- `NavigationStack` with `NavigationLink(value: session.id)` + `.navigationDestination(for: UUID.self)` for type-safe navigation to `SessionSummaryView`
+- `PastSessionRow` reads from `computedSummary` when available, falls back to counting `logEntries` — dual-path display for sessions ended with/without summary
+- Past sessions list limited via `.prefix(5)` on the view side rather than `fetchLimit` in the query — simpler and avoids SwiftData fetch descriptor limitations
+
 ### Auth Pattern (AuthenticationManager.swift)
 - `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
 - Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
@@ -115,5 +121,27 @@ after each iteration and it's included in prompts for context.
   - Notification permission request is best shown conditionally (only when time reminders enabled) to avoid unnecessary prompts
   - SwiftData `User` settings can be updated by fetching the user by `appleUserId` and mutating embedded `UserSettings` struct fields directly — SwiftData tracks the changes
   - `.sheet(isPresented:)` with `presentationDetents([.medium])` works well for a focused notification explanation modal
+---
+
+## Feb 12, 2026 - US-007
+- What was implemented:
+  - `HomeView` with prominent "Start Session" CTA, settings gear icon in toolbar, and past sessions list (last 5, sorted by most recent)
+  - `PastSessionRow` displaying date, duration, drink count, and water count from `computedSummary` or fallback to `logEntries`
+  - Empty state message when no past sessions exist
+  - `SessionSummaryView` with session overview (date, duration, drinks, water, pacing adherence, final waterline) via `@Query` filtered by session ID
+  - `RootView` updated: `HomeView()` replaces old placeholder `ContentView()` for signed-in + onboarded users
+  - 8 new tests across 3 suites: Home Screen Past Sessions Query (4 tests), Home Screen Session Row Data (3 tests), Home Screen Routing (1 test)
+  - All 82 tests pass across 25 suites
+- Files changed:
+  - `Waterline/HomeView.swift` (new)
+  - `Waterline/SessionSummaryView.swift` (new)
+  - `Waterline/ContentView.swift` (modified — RootView routes to HomeView, removed old ContentView placeholder)
+  - `WaterlineTests/WaterlineTests.swift` (added 8 tests, updated 2 comments)
+- **Learnings:**
+  - `@Query` with `#Predicate` in SwiftUI view uses `$0.isActive` directly — no need for `FetchDescriptor` wrapper when the query is static
+  - `.prefix(5)` on `@Query` results is simpler than `fetchLimit` in the query descriptor for view-level display limits
+  - `NavigationLink(value:)` + `.navigationDestination(for:)` pattern works cleanly with UUID-based session navigation
+  - `SessionSummaryView` initializer with `@Query` filter by UUID requires init-time `_sessions = Query(filter:)` pattern — the predicate must capture the parameter
+  - Removed old `ContentView` struct entirely since it was just a placeholder — `HomeView` is the real home screen now
 ---
 

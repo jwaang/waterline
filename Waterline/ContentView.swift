@@ -17,7 +17,7 @@ struct RootView: View {
                 }
             case .signedIn:
                 if hasCompletedOnboarding {
-                    ContentView()
+                    HomeView()
                 } else {
                     ConfigureDefaultsView(authManager: authManager) {
                         hasCompletedOnboarding = true
@@ -30,18 +30,8 @@ struct RootView: View {
     }
 }
 
-struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "drop.fill")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Waterline")
-        }
-        .padding()
-    }
-}
-
 #Preview {
-    ContentView()
+    let store = InMemoryCredentialStore()
+    let manager = AuthenticationManager(store: store)
+    RootView(authManager: manager)
 }

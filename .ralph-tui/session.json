@@ -3,10 +3,10 @@
   "sessionId": "0c45dafe-e522-4ca3-9d2f-275102c83e8c",
   "status": "running",
   "startedAt": "2026-02-13T03:16:20.587Z",
-  "updatedAt": "2026-02-13T03:56:30.371Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-02-13T04:01:00.750Z",
+  "currentIteration": 2,
   "maxIterations": 10,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -47,8 +47,8 @@
       {
         "id": "US-006",
         "title": "Onboarding flow — configure defaults",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-007",
@@ -342,12 +342,21 @@
       "durationMs": 130334,
       "startedAt": "2026-02-13T03:48:58.421Z",
       "endedAt": "2026-02-13T03:51:08.755Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-006",
+      "taskTitle": "Onboarding flow — configure defaults",
+      "taskCompleted": true,
+      "durationMs": 320447,
+      "startedAt": "2026-02-13T03:51:09.920Z",
+      "endedAt": "2026-02-13T03:56:30.367Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [
-    "US-007",
     "US-008",
     "US-009",
     "US-010",

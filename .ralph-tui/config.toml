@@ -13,7 +13,7 @@ agent = "claude"
 tracker = "json"
 
 # Maximum iterations per session (0 = unlimited)
-maxIterations = 5
+maxIterations = 10
 
 # Delay between iterations in milliseconds
 iterationDelay = 1000
