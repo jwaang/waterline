@@ -48,7 +48,7 @@ struct HomeView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
-                        SettingsView(authManager: authManager)
+                        SettingsView(authManager: authManager, syncService: syncService)
                     } label: {
                         Image(systemName: "gearshape")
                     }

@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Query private var users: [User]
 
     let authManager: AuthenticationManager
+    let syncService: SyncService
 
     @State private var showDeleteConfirmation = false
     @State private var showSignOutConfirmation = false
@@ -194,9 +195,13 @@ struct SettingsView: View {
 
     private func save() {
         try? modelContext.save()
+        syncService.triggerSync()
     }
 
     private func deleteAccount() {
+        // Capture apple user ID before deleting local data
+        let appleUserId = user?.appleUserId
+
         let presetDescriptor = FetchDescriptor<DrinkPreset>()
         if let presets = try? modelContext.fetch(presetDescriptor) {
             for preset in presets { modelContext.delete(preset) }
@@ -221,6 +226,13 @@ struct SettingsView: View {
 
         ReminderService.cancelAllTimeReminders()
 
+        // Delete from Convex (best-effort, non-blocking)
+        if let appleUserId {
+            Task {
+                await syncService.deleteRemoteAccount(appleUserId: appleUserId)
+            }
+        }
+
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
 
         authManager.signOut()
@@ -228,8 +240,12 @@ struct SettingsView: View {
 }
 
 #Preview {
+    let container = try! ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     NavigationStack {
-        SettingsView(authManager: AuthenticationManager(store: InMemoryCredentialStore()))
-            .modelContainer(for: [User.self, Session.self, LogEntry.self, DrinkPreset.self], inMemory: true)
+        SettingsView(
+            authManager: AuthenticationManager(store: InMemoryCredentialStore()),
+            syncService: SyncService(convexService: nil, modelContainer: container)
+        )
+        .modelContainer(container)
     }
 }
