@@ -98,6 +98,7 @@ final class Session {
     var endTime: Date?
     var isActive: Bool
     var computedSummary: SessionSummary?
+    var needsSync: Bool = true
 
     var user: User?
 
@@ -109,13 +110,15 @@ final class Session {
         startTime: Date = Date(),
         endTime: Date? = nil,
         isActive: Bool = true,
-        computedSummary: SessionSummary? = nil
+        computedSummary: SessionSummary? = nil,
+        needsSync: Bool = true
     ) {
         self.id = id
         self.startTime = startTime
         self.endTime = endTime
         self.isActive = isActive
         self.computedSummary = computedSummary
+        self.needsSync = needsSync
     }
 }
 
@@ -129,6 +132,7 @@ final class LogEntry {
     var alcoholMeta: AlcoholMeta?
     var waterMeta: WaterMeta?
     var source: LogSource
+    var needsSync: Bool = true
 
     var session: Session?
 
@@ -138,7 +142,8 @@ final class LogEntry {
         type: LogEntryType,
         alcoholMeta: AlcoholMeta? = nil,
         waterMeta: WaterMeta? = nil,
-        source: LogSource = .phone
+        source: LogSource = .phone,
+        needsSync: Bool = true
     ) {
         self.id = id
         self.timestamp = timestamp
@@ -146,6 +151,7 @@ final class LogEntry {
         self.alcoholMeta = alcoholMeta
         self.waterMeta = waterMeta
         self.source = source
+        self.needsSync = needsSync
     }
 }
 
@@ -159,6 +165,7 @@ final class DrinkPreset {
     var sizeOz: Double
     var abv: Double?
     var standardDrinkEstimate: Double
+    var needsSync: Bool = true
 
     var user: User?
 
@@ -168,7 +175,8 @@ final class DrinkPreset {
         drinkType: DrinkType,
         sizeOz: Double,
         abv: Double? = nil,
-        standardDrinkEstimate: Double
+        standardDrinkEstimate: Double,
+        needsSync: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -176,5 +184,6 @@ final class DrinkPreset {
         self.sizeOz = sizeOz
         self.abv = abv
         self.standardDrinkEstimate = standardDrinkEstimate
+        self.needsSync = needsSync
     }
 }

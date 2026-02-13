@@ -65,6 +65,10 @@ actor ConvexService {
         return try await mutation("mutations:createUser", args: args)
     }
 
+    func deleteUser(appleUserId: String) async throws {
+        try await mutationVoid("mutations:deleteUser", args: ["appleUserId": appleUserId])
+    }
+
     // MARK: - Sessions
 
     func upsertSession(

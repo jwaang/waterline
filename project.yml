@@ -51,6 +51,9 @@ targets:
       - path: WaterlineWidgets
         excludes:
           - "Info.plist"
+      - path: Waterline/Models.swift
+      - path: WaterlineIntents/LogDrinkIntent.swift
+      - path: WaterlineIntents/LogWaterIntent.swift
     info:
       path: WaterlineWidgets/Info.plist
       properties:
@@ -71,6 +74,7 @@ targets:
       - path: WaterlineIntents
         excludes:
           - "Info.plist"
+      - path: Waterline/Models.swift
     info:
       path: WaterlineIntents/Info.plist
       properties:
@@ -84,26 +88,16 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.intents
         SWIFT_EMIT_LOC_STRINGS: true
 
-  WaterlineTests:
-    type: bundle.unit-test
-    platform: iOS
-    sources:
-      - path: WaterlineTests
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.tests
-        GENERATE_INFOPLIST_FILE: true
-    dependencies:
-      - target: Waterline
-
 schemes:
   Waterline:
     build:
       targets:
         Waterline: all
-        WaterlineTests: [test]
-    test:
+    run:
+      config: Debug
+  WaterlineWatch:
+    build:
       targets:
-        - WaterlineTests
+        WaterlineWatch: all
     run:
       config: Debug

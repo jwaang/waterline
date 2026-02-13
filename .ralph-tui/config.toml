@@ -1,21 +1,36 @@
-configVersion = "2.1"
 maxIterations = 10
+iterationDelay = 1000
+outputDir = ".ralph-tui/iterations"
+autoCommit = true
 agent = "claude"
 tracker = "json"
-autoCommit = true
-subagentTracingDetail = "full"
-defaultAgent = "claude"
+fallbackAgents = [ "codex" ]
+subagentTracingDetail = "minimal"
+progressFile = ".ralph-tui/progress.md"
+configVersion = "2.1"
 
 [agentOptions]
 [trackerOptions]
-[notifications]
-sound = "system"
+path = "./prd.json"
 
-agent = "claude"
-fallbackAgents = ["codex"]
- 
+[errorHandling]
+strategy = "retry"
+maxRetries = 3
+retryDelayMs = 10000
+continueOnNonZeroExit = false
+
 [rateLimitHandling]
 enabled = true
 maxRetries = 3
-baseBackoffMs = 5000
+baseBackoffMs = 10000
 recoverPrimaryBetweenIterations = true
+
+[notifications]
+enabled = true
+sound = "system"
+
+[parallel]
+mode = "auto"
+maxWorkers = 1
+worktreeDir = ".ralph-tui/worktrees"
+directMerge = true

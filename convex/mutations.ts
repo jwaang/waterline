@@ -127,6 +127,48 @@ export const deleteLogEntry = mutation({
   },
 });
 
+export const deleteUser = mutation({
+  args: {
+    appleUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+
+    if (!user) return;
+
+    // Delete presets
+    const presets = await ctx.db
+      .query("drinkPresets")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const preset of presets) {
+      await ctx.db.delete(preset._id);
+    }
+
+    // Delete sessions and their log entries
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    for (const session of sessions) {
+      const entries = await ctx.db
+        .query("logEntries")
+        .withIndex("by_sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const entry of entries) {
+        await ctx.db.delete(entry._id);
+      }
+      await ctx.db.delete(session._id);
+    }
+
+    // Delete user
+    await ctx.db.delete(user._id);
+  },
+});
+
 export const upsertDrinkPreset = mutation({
   args: {
     userId: v.id("users"),
