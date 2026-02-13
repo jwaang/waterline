@@ -9,16 +9,20 @@ struct HomeView: View {
         order: .reverse
     ) private var pastSessions: [Session]
 
+    @Query(
+        filter: #Predicate<Session> { $0.isActive }
+    ) private var activeSessions: [Session]
+
+    private var activeSession: Session? { activeSessions.first }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Spacer()
-
-                startSessionSection
-
-                Spacer()
-
-                pastSessionsSection
+            Group {
+                if let session = activeSession {
+                    activeSessionContent(session)
+                } else {
+                    noSessionContent
+                }
             }
             .navigationTitle("Waterline")
             .toolbar {
@@ -31,6 +35,119 @@ struct HomeView: View {
                     .accessibilityLabel("Settings")
                 }
             }
+        }
+    }
+
+    // MARK: - Active Session State
+
+    @ViewBuilder
+    private func activeSessionContent(_ session: Session) -> some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            WaterlineIndicator(value: waterlineValue(for: session))
+
+            countsSection(for: session)
+
+            quickAddButtons(for: session)
+
+            viewSessionButton(for: session)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+    }
+
+    private func countsSection(for session: Session) -> some View {
+        HStack(spacing: 32) {
+            VStack(spacing: 4) {
+                Text("\(drinkCount(for: session))")
+                    .font(.title2.weight(.bold))
+                Text("Drinks")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            VStack(spacing: 4) {
+                Text("\(waterCount(for: session))")
+                    .font(.title2.weight(.bold))
+                Text("Water")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func quickAddButtons(for session: Session) -> some View {
+        HStack(spacing: 16) {
+            Button {
+                // Drink logging — implemented in US-012/US-014
+            } label: {
+                Label("Drink", systemImage: "wineglass")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+            .accessibilityLabel("Add Drink")
+
+            Button {
+                // Water logging — implemented in US-013/US-014
+            } label: {
+                Label("Water", systemImage: "drop.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.blue)
+            .accessibilityLabel("Add Water")
+        }
+    }
+
+    private func viewSessionButton(for session: Session) -> some View {
+        NavigationLink(value: session.id) {
+            Label("View Session", systemImage: "arrow.right.circle")
+                .font(.subheadline.weight(.medium))
+        }
+        .navigationDestination(for: UUID.self) { sessionId in
+            SessionSummaryView(sessionId: sessionId)
+        }
+    }
+
+    // MARK: - Waterline Computation
+
+    private func waterlineValue(for session: Session) -> Double {
+        var value: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                value += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                value -= 1
+            }
+        }
+        return value
+    }
+
+    private func drinkCount(for session: Session) -> Int {
+        session.logEntries.filter { $0.type == .alcohol }.count
+    }
+
+    private func waterCount(for session: Session) -> Int {
+        session.logEntries.filter { $0.type == .water }.count
+    }
+
+    // MARK: - No Session State
+
+    private var noSessionContent: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            startSessionSection
+
+            Spacer()
+
+            pastSessionsSection
         }
     }
 
@@ -93,6 +210,66 @@ struct HomeView: View {
         .navigationDestination(for: UUID.self) { sessionId in
             SessionSummaryView(sessionId: sessionId)
         }
+    }
+}
+
+// MARK: - Waterline Indicator
+
+struct WaterlineIndicator: View {
+    let value: Double
+
+    private var isWarning: Bool { value >= 2 }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ZStack {
+                // Background track
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.systemGray5))
+                    .frame(width: 60, height: 200)
+
+                // Center line
+                Rectangle()
+                    .fill(Color(.systemGray3))
+                    .frame(width: 60, height: 2)
+
+                // Fill from center
+                GeometryReader { geo in
+                    let midY = geo.size.height / 2
+                    let maxOffset: CGFloat = geo.size.height / 2 - 8
+                    let clampedValue = min(max(value, -5), 5)
+                    let fillHeight = abs(clampedValue) / 5.0 * maxOffset
+                    let fillColor: Color = isWarning ? .red : (value > 0 ? .orange : .blue)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(fillColor.opacity(0.7))
+                        .frame(width: 44, height: fillHeight)
+                        .position(
+                            x: geo.size.width / 2,
+                            y: value >= 0
+                                ? midY - fillHeight / 2
+                                : midY + fillHeight / 2
+                        )
+                }
+                .frame(width: 60, height: 200)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Text(String(format: "%.1f", value))
+                .font(.title3.weight(.semibold).monospacedDigit())
+                .foregroundStyle(isWarning ? .red : .primary)
+
+            if isWarning {
+                Text("Drink water to return to center")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: value)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Waterline level \(String(format: "%.1f", value))")
+        .accessibilityValue(isWarning ? "Warning: drink water" : "Normal")
     }
 }
 

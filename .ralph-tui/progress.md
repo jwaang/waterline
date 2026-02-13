@@ -145,3 +145,24 @@ after each iteration and it's included in prompts for context.
   - Removed old `ContentView` struct entirely since it was just a placeholder — `HomeView` is the real home screen now
 ---
 
+## Feb 12, 2026 - US-008
+- What was implemented:
+  - `HomeView` updated with conditional rendering: active session state vs no-session state
+  - Second `@Query` added filtering `$0.isActive` to detect active sessions
+  - `WaterlineIndicator` view: vertical gauge with center line, fill from center (orange up/blue down), red warning at threshold ≥2, animated transitions, accessibility labels
+  - Active session shows: Waterline indicator, drink/water counts, "+ Drink" / "+ Water" quick-add buttons (action stubs for US-012/013/014), "View Session" NavigationLink
+  - Waterline value computed inline from session's `logEntries` sorted by timestamp (alcohol += standardDrinkEstimate, water -= 1)
+  - Session auto-recovery inherent — SwiftData `@Query` automatically finds persisted active sessions on relaunch
+  - 9 new tests across 3 suites: Active Session Detection (3), Waterline Computation (4), Warning State (2)
+  - All 91 tests pass across 28 suites
+- Files changed:
+  - `Waterline/HomeView.swift` (modified — added active session state, WaterlineIndicator, waterline computation)
+  - `WaterlineTests/WaterlineTests.swift` (added 9 tests)
+- **Learnings:**
+  - Multiple `@Query` properties in a single SwiftUI view work well for mutually exclusive states (active vs past sessions)
+  - `WaterlineIndicator` uses `GeometryReader` for proportional fill calculation — clamped to ±5 range for visual bounds, with `clipShape` to contain the fill within the rounded rectangle track
+  - Waterline computation from log entries mirrors PRD FR-4 algorithm exactly — will be extracted to `WaterlineEngine` in US-034 for reuse across all surfaces
+  - Quick-add button actions left as stubs (comments reference US-012/013/014) — buttons are visible and tappable but don't log yet
+  - Warning threshold hardcoded to 2 (matching `UserSettings` default) — will need to read from user settings when full session screen is built
+---
+

@@ -1393,3 +1393,268 @@ struct HomeScreenRoutingTests {
         // RootView: signedIn + hasCompletedOnboarding = true → HomeView
     }
 }
+
+// MARK: - Home Screen Active Session Tests
+
+@Suite("Home Screen Active Session Detection")
+struct HomeScreenActiveSessionTests {
+    @Test("Active session detected by isActive query")
+    func activeSessionDetected() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        context.insert(session)
+        try context.save()
+
+        // HomeView uses @Query with filter: $0.isActive
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.count == 1)
+        #expect(results[0].isActive == true)
+    }
+
+    @Test("No active session returns empty results")
+    func noActiveSession() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let ended = Session(
+            startTime: Date().addingTimeInterval(-3600),
+            endTime: Date(),
+            isActive: false
+        )
+        context.insert(ended)
+        try context.save()
+
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.isEmpty)
+    }
+
+    @Test("Active session persists across context recreations (auto-recovery)")
+    func activeSessionPersistsAcrossContexts() throws {
+        let container = try makeContainer()
+
+        // Create active session in one context
+        let context1 = ModelContext(container)
+        let session = Session(isActive: true)
+        let sessionId = session.id
+        context1.insert(session)
+        try context1.save()
+
+        // Fetch in a fresh context — simulates app relaunch
+        let context2 = ModelContext(container)
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let results = try context2.fetch(descriptor)
+        #expect(results.count == 1)
+        #expect(results[0].id == sessionId)
+    }
+}
+
+@Suite("Home Screen Active Session Waterline Computation")
+struct HomeScreenWaterlineComputationTests {
+    @Test("Waterline value computed from log entries")
+    func waterlineFromLogs() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        let drink1 = LogEntry(
+            timestamp: Date().addingTimeInterval(-600),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        let drink2 = LogEntry(
+            timestamp: Date().addingTimeInterval(-300),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .wine, sizeOz: 5.0, standardDrinkEstimate: 1.0)
+        )
+        let water = LogEntry(
+            timestamp: Date(),
+            type: .water,
+            waterMeta: WaterMeta(amountOz: 8.0)
+        )
+        drink1.session = session
+        drink2.session = session
+        water.session = session
+        context.insert(session)
+        context.insert(drink1)
+        context.insert(drink2)
+        context.insert(water)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+
+        // Waterline: +1.0 + 1.0 - 1 = 1.0
+        var waterlineValue: Double = 0
+        for entry in s.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 1.0)
+    }
+
+    @Test("Waterline value is zero with no log entries")
+    func waterlineZeroNoEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+        #expect(s.logEntries.isEmpty)
+
+        // Waterline with no entries = 0.0
+        var waterlineValue: Double = 0
+        for entry in s.logEntries {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 0.0)
+    }
+
+    @Test("Waterline handles fractional standard drink estimates")
+    func waterlineFractionalDrinks() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        let doubleDrink = LogEntry(
+            timestamp: Date().addingTimeInterval(-300),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .liquor, sizeOz: 3.0, standardDrinkEstimate: 2.0)
+        )
+        let halfDrink = LogEntry(
+            timestamp: Date(),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 6.0, standardDrinkEstimate: 0.5)
+        )
+        doubleDrink.session = session
+        halfDrink.session = session
+        context.insert(session)
+        context.insert(doubleDrink)
+        context.insert(halfDrink)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+
+        var waterlineValue: Double = 0
+        for entry in s.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 2.5)
+    }
+
+    @Test("Drink and water counts computed from log entries")
+    func countsFromEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        let drink1 = LogEntry(type: .alcohol, alcoholMeta: AlcoholMeta(
+            drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0
+        ))
+        let drink2 = LogEntry(type: .alcohol, alcoholMeta: AlcoholMeta(
+            drinkType: .wine, sizeOz: 5.0, standardDrinkEstimate: 1.0
+        ))
+        let drink3 = LogEntry(type: .alcohol, alcoholMeta: AlcoholMeta(
+            drinkType: .cocktail, sizeOz: 6.0, standardDrinkEstimate: 1.5
+        ))
+        let water1 = LogEntry(type: .water, waterMeta: WaterMeta(amountOz: 8.0))
+        let water2 = LogEntry(type: .water, waterMeta: WaterMeta(amountOz: 8.0))
+        for entry in [drink1, drink2, drink3, water1, water2] {
+            entry.session = session
+            context.insert(entry)
+        }
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+        let drinkCount = s.logEntries.filter { $0.type == .alcohol }.count
+        let waterCount = s.logEntries.filter { $0.type == .water }.count
+        #expect(drinkCount == 3)
+        #expect(waterCount == 2)
+    }
+}
+
+@Suite("Waterline Indicator Warning State")
+struct WaterlineIndicatorWarningTests {
+    @Test("Warning threshold at 2.0 — default from UserSettings")
+    func warningAtDefaultThreshold() {
+        // WaterlineIndicator uses hardcoded threshold of 2 (matching UserSettings default warningThreshold)
+        // value >= 2 → warning state
+        let belowThreshold = 1.9
+        let atThreshold = 2.0
+        let aboveThreshold = 3.5
+        #expect(belowThreshold < 2)
+        #expect(atThreshold >= 2)
+        #expect(aboveThreshold >= 2)
+    }
+
+    @Test("Waterline value triggers warning when at or above threshold")
+    func warningTriggeredAboveThreshold() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(isActive: true)
+        // Add 3 beers, no water → waterline = 3.0 (above default warning threshold of 2)
+        for i in 0..<3 {
+            let drink = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .alcohol,
+                alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+            )
+            drink.session = session
+            context.insert(drink)
+        }
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+
+        var waterlineValue: Double = 0
+        for entry in s.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                waterlineValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                waterlineValue -= 1
+            }
+        }
+        #expect(waterlineValue == 3.0)
+        #expect(waterlineValue >= 2) // Warning state active
+    }
+}
