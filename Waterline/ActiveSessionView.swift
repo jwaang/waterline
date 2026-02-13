@@ -13,6 +13,7 @@ struct ActiveSessionView: View {
 
     @State private var now = Date()
     @State private var showingDrinkSheet = false
+    @State private var entryToEdit: LogEntry?
 
     private var session: Session? { sessions.first }
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
@@ -41,9 +42,7 @@ struct ActiveSessionView: View {
     // MARK: - Session Content
 
     private func sessionContent(_ session: Session) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-
+        VStack(spacing: 16) {
             WaterlineIndicator(value: waterlineValue(for: session), warningThreshold: warningThreshold)
 
             countsSection(for: session)
@@ -56,9 +55,12 @@ struct ActiveSessionView: View {
 
             quickAddButtons(for: session)
 
-            Spacer()
+            logTimeline(for: session)
         }
         .padding(.horizontal, 24)
+        .sheet(item: $entryToEdit) { entry in
+            EditLogEntryView(entry: entry)
+        }
     }
 
     private func countsSection(for session: Session) -> some View {
@@ -150,6 +152,45 @@ struct ActiveSessionView: View {
         let minutes = Int(remaining) / 60
         let seconds = Int(remaining) % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    // MARK: - Log Timeline
+
+    private func logTimeline(for session: Session) -> some View {
+        let sorted = session.logEntries.sorted(by: { $0.timestamp > $1.timestamp })
+        return Group {
+            if sorted.isEmpty {
+                Text("No entries yet")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 8)
+            } else {
+                List {
+                    Section("Timeline") {
+                        ForEach(sorted) { entry in
+                            LogEntryRow(entry: entry)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    entryToEdit = entry
+                                }
+                        }
+                        .onDelete { offsets in
+                            deleteEntries(offsets, from: sorted, session: session)
+                        }
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .frame(maxHeight: 300)
+            }
+        }
+    }
+
+    private func deleteEntries(_ offsets: IndexSet, from sorted: [LogEntry], session: Session) {
+        for index in offsets {
+            let entry = sorted[index]
+            modelContext.delete(entry)
+        }
+        try? modelContext.save()
     }
 
     // MARK: - Waterline Computation

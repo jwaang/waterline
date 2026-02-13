@@ -14,7 +14,9 @@
 		2445BC13687D271CED595BF4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DF8AB6AC47AD0653B444B0 /* ContentView.swift */; };
 		2F6990F23649351059756437 /* PresetsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 935936E649BD604A4CE91AE9 /* PresetsListView.swift */; };
 		349E4803DA753D20A5770F6F /* WaterlineIntentsExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */; };
+		359843854A298871D80AFCBB /* LogEntryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5CFC80E88D27C379A4E4B /* LogEntryRow.swift */; };
 		35E1247D74602F7B8A7D4E89 /* WaterlineApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC30BDE82B26B39B8C89DD2 /* WaterlineApp.swift */; };
+		44C3491CC911D09054395C9A /* EditLogEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1DA8348C354E4F66E5B7D1 /* EditLogEntryView.swift */; };
 		54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA0B9A74998663E2DAFA317 /* Models.swift */; };
 		6CB136EE0438C01404E1F142 /* WaterlineWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 6DCD502EFF5665453A864235 /* WaterlineWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		70B8A77FF1B88F6966D18B92 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7660566AFF2B39C183B54857 /* Assets.xcassets */; };
@@ -80,6 +82,7 @@
 /* Begin PBXFileReference section */
 		06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineTimelineProvider.swift; sourceTree = "<group>"; };
 		20FA07103593D917FC1FECDE /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
+		2E1DA8348C354E4F66E5B7D1 /* EditLogEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditLogEntryView.swift; sourceTree = "<group>"; };
 		3A047B8CE97B53FC6DC12BA0 /* WaterlineWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterlineWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		418AFCC644115066C972174A /* ConfigureDefaultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureDefaultsView.swift; sourceTree = "<group>"; };
 		45DD6621139B9298618E56EA /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 		AADF82E897611F993792D175 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C9590486F3F96F3593A3E768 /* AddEditPresetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEditPresetView.swift; sourceTree = "<group>"; };
 		CC636F72ED3688D8416E2274 /* WaterlineWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineWatchApp.swift; sourceTree = "<group>"; };
+		CDC5CFC80E88D27C379A4E4B /* LogEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogEntryRow.swift; sourceTree = "<group>"; };
 		DB25235E71F78A8696A30094 /* WaterlineIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = WaterlineIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F65E115F53D7E81EF8D6E11D /* LogDrinkIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogDrinkIntent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -161,8 +165,10 @@
 				418AFCC644115066C972174A /* ConfigureDefaultsView.swift */,
 				88DF8AB6AC47AD0653B444B0 /* ContentView.swift */,
 				45DD6621139B9298618E56EA /* ConvexService.swift */,
+				2E1DA8348C354E4F66E5B7D1 /* EditLogEntryView.swift */,
 				77DC1A7D167FC4E8FE09E140 /* HomeView.swift */,
 				A638D0863309D4978D04E0BF /* LogDrinkView.swift */,
+				CDC5CFC80E88D27C379A4E4B /* LogEntryRow.swift */,
 				8EA0B9A74998663E2DAFA317 /* Models.swift */,
 				973B8EDEAE3005672BCEF80B /* OnboardingView.swift */,
 				935936E649BD604A4CE91AE9 /* PresetsListView.swift */,
@@ -330,8 +336,10 @@
 				0D5F8C352CB2A1A3A4FD062C /* ConfigureDefaultsView.swift in Sources */,
 				2445BC13687D271CED595BF4 /* ContentView.swift in Sources */,
 				DEA443AEC286FA3E2B0AD169 /* ConvexService.swift in Sources */,
+				44C3491CC911D09054395C9A /* EditLogEntryView.swift in Sources */,
 				0AA821402CE618218EF32298 /* HomeView.swift in Sources */,
 				EC20CBDEBBBF4150EDC45E0B /* LogDrinkView.swift in Sources */,
+				359843854A298871D80AFCBB /* LogEntryRow.swift in Sources */,
 				54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */,
 				81640489E75D021E0B5E9D8C /* OnboardingView.swift in Sources */,
 				2F6990F23649351059756437 /* PresetsListView.swift in Sources */,

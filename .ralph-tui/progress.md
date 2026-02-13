@@ -327,3 +327,25 @@ after each iteration and it's included in prompts for context.
   - Guard `!user.presets.isEmpty` prevents duplicate creation if `completeOnboarding()` is somehow called twice or presets were restored from Convex sync
 ---
 
+## 2026-02-12 - US-017
+- What was implemented:
+  - Log timeline in `ActiveSessionView` with reverse-chronological entries, swipe-to-delete, and tap-to-edit via sheet
+  - Same log timeline in `SessionSummaryView` with chronological entries, swipe-to-delete, tap-to-edit, and automatic `computedSummary` recomputation on changes
+  - `EditLogEntryView` — sheet for editing alcohol entries (type, size, estimate) or water entries (amount), reusing the same UI patterns as `LogDrinkView`
+  - `LogEntryRow` — shared row component displaying entry type icon, details (drink type, size, std estimate or water amount), and timestamp
+  - Waterline and all counters recompute automatically on edit/delete: in `ActiveSessionView` via computed properties over `session.logEntries` (SwiftData `@Query` auto-refresh), in `SessionSummaryView` via explicit `recomputeSummary()` call
+  - Convex sync deferred to US-026 (offline-first sync), consistent with all prior stories
+- Files changed:
+  - `Waterline/EditLogEntryView.swift` (new) — edit sheet for alcohol and water log entries
+  - `Waterline/LogEntryRow.swift` (new) — shared log entry row component
+  - `Waterline/ActiveSessionView.swift` (modified — added `entryToEdit` state, `logTimeline()`, `deleteEntries()`, edit sheet)
+  - `Waterline/SessionSummaryView.swift` (modified — added timeline section, edit/delete, `recomputeSummary()`, live-computed overview values)
+- **Learnings:**
+  - `@Model` classes conform to `Identifiable` automatically, so `.sheet(item:)` works directly with `LogEntry?` state — no manual id tracking needed
+  - Active session doesn't need explicit recomputation because all displayed values (waterline, counts, pacing) are computed properties iterating `session.logEntries` which SwiftData auto-refreshes on any insert/delete
+  - `SessionSummaryView` needs explicit `recomputeSummary()` because `computedSummary` is a stored property on `Session` — it doesn't auto-update when log entries change
+  - `.sheet(item:, onDismiss:)` is the correct syntax for combining item-based presentation with dismiss callback — the trailing closure variant `{ _ in }` doesn't compile
+  - Timeline in active session uses reverse-chronological (newest first) for quick glance at recent entries; summary uses chronological (oldest first) for narrative review
+  - `List` with `.frame(maxHeight:)` inside a `VStack` creates a bounded scrollable timeline without taking over the full screen
+---
+
