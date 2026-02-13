@@ -3,10 +3,10 @@
   "sessionId": "2d705256-c3af-4e70-a121-0d7ee2f2cf3e",
   "status": "running",
   "startedAt": "2026-02-13T04:27:16.554Z",
-  "updatedAt": "2026-02-13T04:37:40.702Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-02-13T04:39:12.453Z",
+  "currentIteration": 4,
   "maxIterations": 10,
-  "tasksCompleted": 3,
+  "tasksCompleted": 4,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -101,8 +101,8 @@
       {
         "id": "US-015",
         "title": "Drink presets — create and manage",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-016",
@@ -262,6 +262,16 @@
       "durationMs": 78710,
       "startedAt": "2026-02-13T04:32:43.753Z",
       "endedAt": "2026-02-13T04:34:02.463Z"
+    },
+    {
+      "iteration": 4,
+      "status": "completed",
+      "taskId": "US-015",
+      "taskTitle": "Drink presets — create and manage",
+      "taskCompleted": true,
+      "durationMs": 217093,
+      "startedAt": "2026-02-13T04:34:03.604Z",
+      "endedAt": "2026-02-13T04:37:40.697Z"
     }
   ],
   "skippedTaskIds": [],

@@ -188,7 +188,41 @@ struct ConfigureDefaultsView: View {
     }
 
     private func completeOnboarding() {
+        createDefaultPresets()
         onComplete()
+    }
+
+    private func createDefaultPresets() {
+        guard let appleUserId = authManager.currentAppleUserId else { return }
+
+        let descriptor = FetchDescriptor<User>(
+            predicate: #Predicate { $0.appleUserId == appleUserId }
+        )
+        guard let user = try? modelContext.fetch(descriptor).first else { return }
+
+        // Skip if user already has presets (e.g. restored from Convex sync)
+        if !user.presets.isEmpty { return }
+
+        let defaults: [(String, DrinkType, Double, Double)] = [
+            ("Beer", .beer, 12, 1.0),
+            ("Glass of Wine", .wine, 5, 1.0),
+            ("Shot", .liquor, 1.5, 1.0),
+            ("Cocktail", .cocktail, 6, 1.0),
+            ("Double", .liquor, 3, 2.0),
+        ]
+
+        for (name, drinkType, sizeOz, estimate) in defaults {
+            let preset = DrinkPreset(
+                name: name,
+                drinkType: drinkType,
+                sizeOz: sizeOz,
+                standardDrinkEstimate: estimate
+            )
+            preset.user = user
+            modelContext.insert(preset)
+        }
+
+        try? modelContext.save()
     }
 }
 

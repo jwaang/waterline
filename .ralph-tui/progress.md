@@ -314,3 +314,16 @@ after each iteration and it's included in prompts for context.
   - Settings gear button uses `NavigationLink` (destination-based) instead of `Button` + programmatic navigation — simpler and avoids needing additional state management
 ---
 
+## 2026-02-12 - US-016
+- What was implemented:
+  - Default drink presets created during onboarding completion in `ConfigureDefaultsView.completeOnboarding()`: "Beer" (12oz, 1.0 std), "Glass of Wine" (5oz, 1.0 std), "Shot" (1.5oz, 1.0 std), "Cocktail" (6oz, 1.0 std), "Double" (3oz, 2.0 std)
+  - Guard clause skips creation if user already has presets (idempotent for Convex sync restore scenarios)
+  - Presets are standard `DrinkPreset` objects — fully editable and deletable via `PresetsListView` from US-015
+- Files changed:
+  - `Waterline/ConfigureDefaultsView.swift` (modified — added `createDefaultPresets()` called from `completeOnboarding()`)
+- **Learnings:**
+  - Default presets belong in the onboarding completion flow (`completeOnboarding()`) rather than in app launch or HomeView — this ensures they exist exactly once after onboarding and before the user reaches the home screen
+  - No special "isDefault" flag needed on `DrinkPreset` — default presets are regular user presets that happen to be pre-created, keeping the model simple and the presets fully user-owned
+  - Guard `!user.presets.isEmpty` prevents duplicate creation if `completeOnboarding()` is somehow called twice or presets were restored from Convex sync
+---
+
