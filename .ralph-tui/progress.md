@@ -575,3 +575,29 @@ after each iteration and it's included in prompts for context.
   - `containerBackground(.fill.tertiary, for: .widget)` is only needed for system family widgets, not accessory family widgets (Lock Screen widgets handle their own backgrounds)
 ---
 
+## 2026-02-13 - US-031
+- What was implemented:
+  - Home Screen widgets in three sizes: `.systemSmall` (enhanced from US-030), `.systemMedium` (new), `.systemLarge` (new)
+  - `SystemMediumView`: horizontal layout with circular Waterline gauge (custom `Circle().trim` + `strokeBorder`), drink/water counts, next reminder countdown, and interactive quick-add buttons via App Intents
+  - `SystemLargeView`: vertical layout with Waterline value + counts header, linear capacity gauge, next reminder label, recent 3 log entries list with type icons/labels/timestamps, and interactive quick-add buttons
+  - `WaterlineTimelineEntry` extended with `nextReminderText`, `sessionStartTime`, `recentEntries: [LogEntrySnapshot]`, and `lastSession: LastSessionSnapshot?`
+  - `LogEntrySnapshot` — lightweight struct carrying `id`, `timestamp`, `isAlcohol`, `label` for widget display without importing full `@Model` classes
+  - `LastSessionSnapshot` — lightweight struct carrying `date`, `duration`, `drinkCount`, `waterCount`, `finalWaterline` for no-session state
+  - Timeline provider refactored: `buildActiveEntry()` extracts active session data (waterline, counts, reminder countdown, recent entries); `fetchCurrentEntry()` fetches last completed session for no-session summary
+  - No-session state for all three home screen sizes shows last session summary (date, counts, final waterline, duration) when available, or generic "Start a session" prompt when no sessions exist
+  - Interactive `Button(intent:)` on all three sizes via `LogDrinkIntent` and `LogWaterIntent`
+  - Widget configuration updated: `.supportedFamilies` now includes `.systemSmall`, `.systemMedium`, `.systemLarge` alongside Lock Screen accessory families
+  - Widget previews added for all new sizes in both active and no-session states
+  - Widget timeline updates on log events already wired from US-030 (no changes needed)
+- Files changed:
+  - `WaterlineWidgets/WaterlineTimelineProvider.swift` (rewritten — extended entry, added LogEntrySnapshot/LastSessionSnapshot, refactored provider with buildActiveEntry/last session fetch)
+  - `WaterlineWidgets/WaterlineWidgets.swift` (extended — added SystemMediumView, SystemLargeView, enhanced no-session states, updated config/dispatcher/previews)
+- **Learnings:**
+  - `Label(date, style: .relative)` does not exist — `.relative` date style is a `Text` API, not `Label`. Use `HStack { Image(systemName:) Text(date, style: .relative) }` instead for icon + relative time display in widgets
+  - Home Screen system widgets have much more space than Lock Screen accessory widgets — medium supports a two-column layout (gauge + info), large supports a header + gauge + list + buttons layout
+  - `Gauge` with `.linearCapacity` style is the correct API for a filled horizontal progress bar in widgets — `GaugeStyle.linearCapacity` fills left-to-right unlike `.accessoryLinear` which is designed for Lock Screen
+  - Custom `Circle().trim(from:to:).stroke()` with `.rotationEffect(.degrees(-90))` creates a cleaner circular progress indicator for medium widgets than the built-in `Gauge(.accessoryCircular)` which is Lock Screen-specific
+  - Widget timeline entries should use lightweight snapshot structs (not `@Model` classes) for any data displayed — `LogEntrySnapshot` avoids SwiftData coupling in the widget view layer
+  - `SortDescriptor(\Session.startTime, order: .reverse)` in `FetchDescriptor` works in widget extensions for fetching the most recent past session
+---
+
