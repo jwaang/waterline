@@ -24,6 +24,8 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
     @State private var now = Date()
     @State private var showingDrinkSheet = false
+    @State private var showingAbandonedSessionAlert = false
+    @State private var abandonedSessionHours: Int = 0
 
     private var activeSession: Session? { activeSessions.first }
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
@@ -60,6 +62,19 @@ struct HomeView: View {
             }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
                 now = time
+            }
+            .onAppear {
+                checkForAbandonedSession()
+            }
+            .alert("Session Still Running", isPresented: $showingAbandonedSessionAlert) {
+                Button("End Now", role: .destructive) {
+                    if let session = activeSession {
+                        endAbandonedSession(session)
+                    }
+                }
+                Button("Keep Going", role: .cancel) {}
+            } message: {
+                Text("Your session has been running for \(abandonedSessionHours) hours. End it?")
             }
         }
     }
@@ -408,6 +423,73 @@ struct HomeView: View {
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
 
         // Live Activity — handled in US-032
+    }
+
+    // MARK: - Abandoned Session Handling
+
+    private func checkForAbandonedSession() {
+        guard let session = activeSession else { return }
+        let elapsed = Date().timeIntervalSince(session.startTime)
+        let hours = Int(elapsed / 3600)
+        if hours >= 12 {
+            abandonedSessionHours = hours
+            showingAbandonedSessionAlert = true
+        }
+    }
+
+    private func endAbandonedSession(_ session: Session) {
+        session.endTime = Date()
+        session.isActive = false
+
+        // Compute summary
+        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+        let totalDrinks = entries.filter { $0.type == .alcohol }.count
+        let totalWater = entries.filter { $0.type == .water }.count
+        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
+        let duration = session.endTime!.timeIntervalSince(session.startTime)
+
+        let waterEveryN = userSettings.waterEveryNDrinks
+        var drinksSinceWater = 0
+        var waterDueCount = 0
+        var waterLoggedCount = 0
+        for entry in entries {
+            if entry.type == .alcohol {
+                drinksSinceWater += 1
+                if drinksSinceWater >= waterEveryN {
+                    waterDueCount += 1
+                    drinksSinceWater = 0
+                }
+            } else if entry.type == .water {
+                if waterDueCount > waterLoggedCount {
+                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
+                }
+                drinksSinceWater = 0
+            }
+        }
+        let adherence = waterDueCount > 0 ? Double(waterLoggedCount) / Double(waterDueCount) : 1.0
+
+        var wlValue: Double = 0
+        for entry in entries {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                wlValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                wlValue -= 1
+            }
+        }
+
+        session.computedSummary = SessionSummary(
+            totalDrinks: totalDrinks,
+            totalWater: totalWater,
+            totalStandardDrinks: totalStdDrinks,
+            durationSeconds: duration,
+            pacingAdherence: adherence,
+            finalWaterlineValue: wlValue
+        )
+
+        ReminderService.cancelAllTimeReminders()
+        try? modelContext.save()
+        syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Navigation Routing
