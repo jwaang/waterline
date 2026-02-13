@@ -3,10 +3,10 @@
   "sessionId": "0c45dafe-e522-4ca3-9d2f-275102c83e8c",
   "status": "running",
   "startedAt": "2026-02-13T03:16:20.587Z",
-  "updatedAt": "2026-02-13T04:05:06.996Z",
-  "currentIteration": 3,
+  "updatedAt": "2026-02-13T04:10:40.893Z",
+  "currentIteration": 1,
   "maxIterations": 10,
-  "tasksCompleted": 5,
+  "tasksCompleted": 6,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -59,8 +59,8 @@
       {
         "id": "US-008",
         "title": "Home screen — active session state",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-009",
@@ -362,12 +362,21 @@
       "durationMs": 269241,
       "startedAt": "2026-02-13T03:56:31.503Z",
       "endedAt": "2026-02-13T04:01:00.744Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-008",
+      "taskTitle": "Home screen — active session state",
+      "taskCompleted": true,
+      "durationMs": 228157,
+      "startedAt": "2026-02-13T04:01:18.833Z",
+      "endedAt": "2026-02-13T04:05:06.990Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [
-    "US-009",
     "US-010",
     "US-011",
     "US-012"

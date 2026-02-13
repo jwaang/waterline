@@ -30,6 +30,12 @@ after each iteration and it's included in prompts for context.
 - `PastSessionRow` reads from `computedSummary` when available, falls back to counting `logEntries` — dual-path display for sessions ended with/without summary
 - Past sessions list limited via `.prefix(5)` on the view side rather than `fetchLimit` in the query — simpler and avoids SwiftData fetch descriptor limitations
 
+### Navigation Routing Pattern (HomeView.swift)
+- Single `.navigationDestination(for: UUID.self)` at `NavigationStack` root — SwiftUI only allows one per type
+- `sessionDestination(for:)` router checks `activeSessions` array to dispatch: active → `ActiveSessionView`, past → `SessionSummaryView`
+- `NavigationPath` state enables programmatic push via `.append(uuid)` after session creation
+- All `NavigationLink(value: session.id)` throughout the view hierarchy share the same destination handler
+
 ### Auth Pattern (AuthenticationManager.swift)
 - `AuthenticationManager` is `@Observable @MainActor` — drives SwiftUI reactive auth state
 - Uses `AuthCredentialStore` protocol for storage injection (Keychain in prod, in-memory for tests)
@@ -164,5 +170,27 @@ after each iteration and it's included in prompts for context.
   - Waterline computation from log entries mirrors PRD FR-4 algorithm exactly — will be extracted to `WaterlineEngine` in US-034 for reuse across all surfaces
   - Quick-add button actions left as stubs (comments reference US-012/013/014) — buttons are visible and tappable but don't log yet
   - Warning threshold hardcoded to 2 (matching `UserSettings` default) — will need to read from user settings when full session screen is built
+---
+
+## Feb 12, 2026 - US-009
+- What was implemented:
+  - `startSession()` function in `HomeView` that creates a new `Session` with `startTime = now`, `isActive = true`, inserts into SwiftData, and navigates to `ActiveSessionView`
+  - Single-active-session constraint: checks `activeSessions.first` before creating; if active session exists, navigates to it instead
+  - `ActiveSessionView` — dedicated view for active session display using `@Query` filter by session ID, with waterline indicator, drink/water counts, and quick-add button stubs (US-012/013/014)
+  - `NavigationPath`-based programmatic navigation: "Start Session" pushes to `ActiveSessionView`, past session taps push to `SessionSummaryView`
+  - Unified `sessionDestination(for:)` router that checks if session is active to choose `ActiveSessionView` vs `SessionSummaryView` — resolves single `.navigationDestination(for: UUID.self)` constraint
+  - Convex sync placeholder via fire-and-forget `Task.detached` — will be wired when `ConvexService` is available in environment (US-026)
+  - Live Activity trigger comment placeholder for US-032
+  - 8 new tests across 3 suites: Start Session Creation (3), Single Active Session Constraint (3), Start Session Navigation (2)
+  - All 99 tests pass across 31 suites
+- Files changed:
+  - `Waterline/HomeView.swift` (modified — added startSession(), syncSessionToConvex(), sessionDestination(), NavigationPath)
+  - `Waterline/ActiveSessionView.swift` (new — placeholder active session screen)
+  - `WaterlineTests/WaterlineTests.swift` (added 8 tests)
+- **Learnings:**
+  - SwiftUI `NavigationStack` only supports one `.navigationDestination(for: Type.self)` per type in the hierarchy — must use a single routing function to dispatch to different views based on data state
+  - `NavigationPath` with `.append(uuid)` enables programmatic navigation after session creation without needing `@Binding` or `NavigationLink(isActive:)`
+  - The active session check (`activeSessions.first`) is already reactive via `@Query` — no need for manual refresh after insert since SwiftData triggers view update
+  - Convex sync pattern follows auth precedent: fire-and-forget with non-fatal failure — local SwiftData is authoritative
 ---
 

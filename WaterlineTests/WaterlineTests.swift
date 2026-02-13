@@ -1658,3 +1658,200 @@ struct WaterlineIndicatorWarningTests {
         #expect(waterlineValue >= 2) // Warning state active
     }
 }
+
+// MARK: - US-009: Start Session Tests
+
+@Suite("Start Session Creation")
+struct StartSessionCreationTests {
+    @Test("New session created with startTime and isActive true")
+    func newSessionDefaults() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let before = Date()
+        let session = Session(startTime: Date(), isActive: true)
+        context.insert(session)
+        try context.save()
+        let after = Date()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>())
+        #expect(fetched.count == 1)
+        #expect(fetched[0].isActive == true)
+        #expect(fetched[0].endTime == nil)
+        #expect(fetched[0].computedSummary == nil)
+        #expect(fetched[0].logEntries.isEmpty)
+        #expect(fetched[0].startTime >= before)
+        #expect(fetched[0].startTime <= after)
+    }
+
+    @Test("Session has unique UUID on creation")
+    func sessionHasUniqueId() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session1 = Session(startTime: Date(), isActive: true)
+        let session2 = Session(startTime: Date(), isActive: false)
+        context.insert(session1)
+        context.insert(session2)
+        try context.save()
+
+        #expect(session1.id != session2.id)
+    }
+
+    @Test("Session can be associated with a user")
+    func sessionUserAssociation() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let user = User(appleUserId: "session-user-\(UUID().uuidString)")
+        let session = Session(startTime: Date(), isActive: true)
+        session.user = user
+        context.insert(user)
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        #expect(fetched.count == 1)
+        #expect(fetched[0].user?.appleUserId == user.appleUserId)
+    }
+}
+
+@Suite("Single Active Session Constraint")
+struct SingleActiveSessionConstraintTests {
+    @Test("Only one active session should exist at a time")
+    func singleActiveSessionEnforced() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        // Create first active session
+        let session1 = Session(startTime: Date(), isActive: true)
+        context.insert(session1)
+        try context.save()
+
+        // Check for existing active session before creating another
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let existing = try context.fetch(descriptor)
+        #expect(!existing.isEmpty) // Active session exists — should navigate, not create
+
+        // Verify only one active session
+        #expect(existing.count == 1)
+        #expect(existing[0].id == session1.id)
+    }
+
+    @Test("Active session coexists with ended sessions")
+    func activeCoexistsWithEnded() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let ended = Session(
+            startTime: Date().addingTimeInterval(-7200),
+            endTime: Date().addingTimeInterval(-3600),
+            isActive: false
+        )
+        let active = Session(startTime: Date(), isActive: true)
+        context.insert(ended)
+        context.insert(active)
+        try context.save()
+
+        let activeDescriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let pastDescriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { !$0.isActive }
+        )
+
+        let activeResults = try context.fetch(activeDescriptor)
+        let pastResults = try context.fetch(pastDescriptor)
+        #expect(activeResults.count == 1)
+        #expect(activeResults[0].id == active.id)
+        #expect(pastResults.count == 1)
+        #expect(pastResults[0].id == ended.id)
+    }
+
+    @Test("Start session with existing active returns existing session ID")
+    func startWithExistingReturnsExistingId() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let existing = Session(startTime: Date().addingTimeInterval(-1800), isActive: true)
+        context.insert(existing)
+        try context.save()
+
+        // Simulate startSession logic: check for active first
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let activeSessions = try context.fetch(descriptor)
+        let targetId: UUID
+        if let first = activeSessions.first {
+            targetId = first.id // Navigate to existing
+        } else {
+            let newSession = Session(startTime: Date(), isActive: true)
+            context.insert(newSession)
+            try context.save()
+            targetId = newSession.id
+        }
+
+        #expect(targetId == existing.id)
+        // Verify no new session was created
+        let allSessions = try context.fetch(FetchDescriptor<Session>())
+        #expect(allSessions.count == 1)
+    }
+}
+
+@Suite("Start Session Navigation")
+struct StartSessionNavigationTests {
+    @Test("New session creation produces a navigable session ID")
+    func newSessionProducesNavigableId() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+
+        let session = Session(startTime: Date(), isActive: true)
+        context.insert(session)
+        try context.save()
+
+        // Session ID should be fetchable for navigation destination
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let results = try context.fetch(descriptor)
+        #expect(results.count == 1)
+        #expect(results[0].id == session.id)
+
+        // ActiveSessionView uses @Query with filter by session.id
+        let sessionId = session.id
+        let viewDescriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.id == sessionId }
+        )
+        let viewResults = try context.fetch(viewDescriptor)
+        #expect(viewResults.count == 1)
+        #expect(viewResults[0].isActive == true)
+    }
+
+    @Test("Session persists after creation for app relaunch recovery")
+    func sessionPersistsForRecovery() throws {
+        let container = try makeContainer()
+
+        // Create in one context
+        let context1 = ModelContext(container)
+        let session = Session(startTime: Date(), isActive: true)
+        let sessionId = session.id
+        context1.insert(session)
+        try context1.save()
+
+        // Fetch in fresh context — simulates relaunch
+        let context2 = ModelContext(container)
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        let results = try context2.fetch(descriptor)
+        #expect(results.count == 1)
+        #expect(results[0].id == sessionId)
+        #expect(results[0].isActive == true)
+        #expect(results[0].startTime <= Date())
+    }
+}

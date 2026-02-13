@@ -13,10 +13,12 @@ struct HomeView: View {
         filter: #Predicate<Session> { $0.isActive }
     ) private var activeSessions: [Session]
 
+    @State private var navigationPath = NavigationPath()
+
     private var activeSession: Session? { activeSessions.first }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             Group {
                 if let session = activeSession {
                     activeSessionContent(session)
@@ -34,6 +36,9 @@ struct HomeView: View {
                     }
                     .accessibilityLabel("Settings")
                 }
+            }
+            .navigationDestination(for: UUID.self) { sessionId in
+                sessionDestination(for: sessionId)
             }
         }
     }
@@ -110,9 +115,6 @@ struct HomeView: View {
             Label("View Session", systemImage: "arrow.right.circle")
                 .font(.subheadline.weight(.medium))
         }
-        .navigationDestination(for: UUID.self) { sessionId in
-            SessionSummaryView(sessionId: sessionId)
-        }
     }
 
     // MARK: - Waterline Computation
@@ -155,7 +157,7 @@ struct HomeView: View {
 
     private var startSessionSection: some View {
         Button {
-            // Session start — implemented in US-009
+            startSession()
         } label: {
             Label("Start Session", systemImage: "play.fill")
                 .font(.headline)
@@ -166,6 +168,46 @@ struct HomeView: View {
         .controlSize(.large)
         .padding(.horizontal, 32)
         .padding(.bottom, 32)
+    }
+
+    private func startSession() {
+        // Single-active constraint: if one exists, navigate to it
+        if let existing = activeSession {
+            navigationPath.append(existing.id)
+            return
+        }
+
+        let session = Session(startTime: Date(), isActive: true)
+        modelContext.insert(session)
+        try? modelContext.save()
+
+        navigationPath.append(session.id)
+
+        // Background Convex sync — fire-and-forget
+        syncSessionToConvex(session)
+
+        // Live Activity — handled in US-032
+    }
+
+    private func syncSessionToConvex(_ session: Session) {
+        // Convex sync requires user context; find user to get Convex userId
+        // For now, sync using the session data — ConvexService integration
+        // will be connected when ConvexService is injected via environment
+        Task.detached { @Sendable in
+            // Placeholder for Convex sync — will be wired when ConvexService
+            // is available in the environment (US-026 offline-first sync)
+        }
+    }
+
+    // MARK: - Navigation Routing
+
+    @ViewBuilder
+    private func sessionDestination(for sessionId: UUID) -> some View {
+        if activeSessions.contains(where: { $0.id == sessionId }) {
+            ActiveSessionView(sessionId: sessionId)
+        } else {
+            SessionSummaryView(sessionId: sessionId)
+        }
     }
 
     // MARK: - Past Sessions
@@ -207,9 +249,6 @@ struct HomeView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationDestination(for: UUID.self) { sessionId in
-            SessionSummaryView(sessionId: sessionId)
-        }
     }
 }
 
