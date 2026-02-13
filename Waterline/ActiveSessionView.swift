@@ -16,6 +16,7 @@ struct ActiveSessionView: View {
     @State private var now = Date()
     @State private var showingDrinkSheet = false
     @State private var showingEndConfirmation = false
+    @State private var showingSummary = false
     @State private var entryToEdit: LogEntry?
 
     private var session: Session? { sessions.first }
@@ -81,6 +82,9 @@ struct ActiveSessionView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .navigationDestination(isPresented: $showingSummary) {
+            SessionSummaryView(sessionId: sessionId)
+        }
     }
 
     // MARK: - End Session
@@ -110,14 +114,20 @@ struct ActiveSessionView: View {
         // Cancel all active reminders
         ReminderService.cancelAllTimeReminders()
 
-        // End Live Activity — handled in US-032
+        // End Live Activity — will be fully implemented in US-032
 
-        // Mark session for re-sync (fields changed since last sync)
+        // Mark for sync and persist
         session.needsSync = true
         try? modelContext.save()
 
+        // Sync to Convex
         syncService.triggerSync()
+
+        // Reload widgets
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+
+        // Navigate to summary
+        showingSummary = true
     }
 
     private func computeSummary(for session: Session) {
