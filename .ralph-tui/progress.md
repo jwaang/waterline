@@ -427,3 +427,26 @@ after each iteration and it's included in prompts for context.
   - Adding `@Query private var users: [User]` follows the established codebase pattern (used in ActiveSessionView, HomeView) for accessing user settings from any view
 ---
 
+## 2026-02-13 - US-024
+- What was implemented:
+  - `SettingsView` with 5 sections: Reminders (time-based toggle + interval picker, per-drink water frequency stepper), Waterline (warning threshold stepper), Defaults (water amount stepper, oz/ml segmented picker), Presets (NavigationLink to existing `PresetsListView` with preset count badge), Account (sign out with confirmation, delete account with destructive confirmation dialog)
+  - All settings changes save immediately to SwiftData via `Binding(get:set:)` pattern that mutates `user.settings` directly and calls `modelContext.save()`
+  - Delete account flow: cascade-deletes all SwiftData entities (presets → log entries → sessions → user), cancels active reminders, resets `hasCompletedOnboarding` UserDefaults flag, calls `authManager.signOut()` to return to onboarding
+  - `HomeView` updated to accept `authManager: AuthenticationManager` parameter, forwarded to `SettingsView` for sign-out/delete account
+  - `RootView` updated to pass `authManager` to `HomeView`
+  - Gear icon in HomeView toolbar now navigates to `SettingsView` (previously went directly to `PresetsListView`)
+  - Convex `deleteUser` mutation added to cascade-delete all remote user data (presets → log entries → sessions → user) by `appleUserId`
+  - `ConvexService.deleteUser(appleUserId:)` Swift method added
+- Files changed:
+  - `Waterline/SettingsView.swift` (new) — full settings screen with all 5 sections
+  - `Waterline/HomeView.swift` (modified — added `authManager` parameter, updated toolbar to navigate to SettingsView, updated preview)
+  - `Waterline/ContentView.swift` (modified — RootView passes `authManager` to HomeView)
+  - `Waterline/ConvexService.swift` (modified — added `deleteUser(appleUserId:)` method)
+  - `convex/mutations.ts` (modified — added `deleteUser` mutation with cascade delete)
+- **Learnings:**
+  - `Binding(get:set:)` with direct `user?.settings.field = newValue` + `modelContext.save()` is the cleanest pattern for settings that save immediately — no need for `@State` local copies since SwiftData's `@Query` handles reactivity
+  - Passing `AuthenticationManager` through the view hierarchy (RootView → HomeView → SettingsView) is necessary because auth state drives top-level navigation and can't be reconstructed from SwiftData alone — the Keychain credential store and auth state machine are app-level concerns
+  - `UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")` must be called during account deletion to ensure the user goes through full onboarding again, not just the sign-in screen — `@AppStorage` reads from the same backing store
+  - Delete account must delete child entities (presets, log entries) before parent entities (sessions, user) even though SwiftData `@Relationship(deleteRule: .cascade)` should handle it — explicit deletion is safer and avoids relying on cascade timing during batch deletes
+---
+

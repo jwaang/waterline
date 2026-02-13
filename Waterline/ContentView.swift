@@ -17,7 +17,7 @@ struct RootView: View {
                 }
             case .signedIn:
                 if hasCompletedOnboarding {
-                    HomeView()
+                    HomeView(authManager: authManager)
                 } else {
                     ConfigureDefaultsView(authManager: authManager) {
                         hasCompletedOnboarding = true

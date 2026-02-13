@@ -17,6 +17,8 @@ struct HomeView: View {
     @Query private var users: [User]
     @Query private var presets: [DrinkPreset]
 
+    let authManager: AuthenticationManager
+
     @State private var navigationPath = NavigationPath()
     @State private var now = Date()
     @State private var showingDrinkSheet = false
@@ -38,7 +40,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
-                        PresetsListView()
+                        SettingsView(authManager: authManager)
                     } label: {
                         Image(systemName: "gearshape")
                     }
@@ -583,6 +585,6 @@ struct PastSessionRow: View {
 }
 
 #Preview {
-    HomeView()
+    HomeView(authManager: AuthenticationManager(store: InMemoryCredentialStore()))
         .modelContainer(for: [User.self, Session.self, LogEntry.self, DrinkPreset.self], inMemory: true)
 }
