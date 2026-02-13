@@ -10,6 +10,7 @@ after each iteration and it's included in prompts for context.
 - **Recompute pattern**: When editing/deleting log entries in summary, recompute the `SessionSummary` by replaying all remaining entries in timestamp order, then save to `session.computedSummary`.
 - **Navigation routing**: HomeView uses `navigationDestination(for: UUID.self)` to route to either `ActiveSessionView` (if session is active) or `SessionSummaryView` (if ended).
 - **SettingsView** requires both `authManager` and `syncService` parameters. Settings changes save to SwiftData immediately and trigger Convex sync via `syncService.triggerSync()`.
+- **Sync architecture**: Offline-first with `needsSync` flags on all models. SyncService uses NWPathMonitor for connectivity, auto-syncs on reconnection. All writes go to SwiftData first, then `triggerSync()`. When modifying already-synced records (e.g., ending a session), must re-set `needsSync = true` before saving.
 
 ---
 
@@ -35,4 +36,18 @@ after each iteration and it's included in prompts for context.
   - SettingsView was already feature-complete for local-only operation; the missing piece was Convex sync integration
   - SyncService's `convexService` is private, so remote deletion needed a new public method on SyncService rather than exposing ConvexService directly
   - ConvexService is currently nil (not yet configured with deployment URL), so sync calls are effectively no-ops but correctly structured for when it's wired up
+---
+
+## Feb 13, 2026 - US-026
+- Offline-first sync was already fully implemented across the codebase. One gap fixed:
+  - `ActiveSessionView.endSession()` had a placeholder `Task.detached` block instead of calling `syncService.triggerSync()`. Replaced with proper sync trigger and added `session.needsSync = true` to ensure ended sessions re-sync.
+- Verified all 4 acceptance criteria already met:
+  1. All log entries write to SwiftData first (every `logWater`, `logPreset`, `LogDrinkView` flow)
+  2. Background sync queue with NWPathMonitor, `needsSync` flags, auto-sync on reconnection
+  3. Last-write-wins conflict resolution via timestamp-based upserts
+  4. SyncStatusIndicator in toolbar of both HomeView and ActiveSessionView (cloud icons with states)
+- Files changed: `Waterline/ActiveSessionView.swift`
+- **Learnings:**
+  - When modifying an already-synced record (e.g., setting `session.isActive = false`), you must explicitly set `needsSync = true` again — SwiftData property changes don't auto-reset custom sync flags
+  - The sync architecture is well-designed: `SyncService` handles sessions first (dependency ordering), then log entries, then presets, with per-item error tolerance and retry on next cycle
 ---

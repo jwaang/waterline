@@ -112,12 +112,12 @@ struct ActiveSessionView: View {
 
         // End Live Activity — handled in US-032
 
-        // Sync to Convex — fire-and-forget
-        Task.detached { @Sendable in
-            // Placeholder for Convex sync — will be wired in US-026
-        }
-
+        // Mark session for re-sync (fields changed since last sync)
+        session.needsSync = true
         try? modelContext.save()
+
+        syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     private func computeSummary(for session: Session) {
