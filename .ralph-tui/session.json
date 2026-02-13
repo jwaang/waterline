@@ -3,10 +3,10 @@
   "sessionId": "0c45dafe-e522-4ca3-9d2f-275102c83e8c",
   "status": "running",
   "startedAt": "2026-02-13T03:16:20.587Z",
-  "updatedAt": "2026-02-13T04:14:34.488Z",
-  "currentIteration": 1,
+  "updatedAt": "2026-02-13T04:23:16.591Z",
+  "currentIteration": 2,
   "maxIterations": 10,
-  "tasksCompleted": 7,
+  "tasksCompleted": 8,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -71,8 +71,8 @@
       {
         "id": "US-010",
         "title": "Active session screen — Waterline indicator",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-011",
@@ -382,12 +382,21 @@
       "durationMs": 312338,
       "startedAt": "2026-02-13T04:05:28.546Z",
       "endedAt": "2026-02-13T04:10:40.884Z"
+    },
+    {
+      "iteration": 2,
+      "status": "completed",
+      "taskId": "US-010",
+      "taskTitle": "Active session screen — Waterline indicator",
+      "taskCompleted": true,
+      "durationMs": 232441,
+      "startedAt": "2026-02-13T04:10:42.040Z",
+      "endedAt": "2026-02-13T04:14:34.481Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [
-    "US-011",
     "US-012"
   ],
   "subagentPanelVisible": false

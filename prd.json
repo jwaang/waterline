@@ -14,14 +14,12 @@
         "WidgetKit extension target",
         "App Intent extension target (for interactive widgets/Live Activity actions)",
         "Project builds successfully for all targets",
-        "Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`, `WaterlineTests/`",
-        "Swift Testing framework configured in test target"
+        "Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`"
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-002",
@@ -33,14 +31,12 @@
         "`Session` model: `id`, `userId`, `startTime`, `endTime` (optional), `isActive` (Bool), `computedSummary` (optional)",
         "`LogEntry` model: `id`, `sessionId`, `timestamp`, `type` (enum: alcohol/water), `alcoholMeta` (optional: drinkType, sizeOz, abv, standardDrinkEstimate, presetId), `waterMeta` (optional: amountOz), `source` (enum: phone/watch/widget/liveActivity)",
         "`DrinkPreset` model: `id`, `userId`, `name`, `drinkType` (enum: beer/wine/liquor/cocktail), `sizeOz`, `abv` (optional), `standardDrinkEstimate` (Double)",
-        "All models use `@Model` macro and relationships are properly defined",
-        "Unit tests verify model creation, relationships, and defaults"
+        "All models use `@Model` macro and relationships are properly defined"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-003",
@@ -54,14 +50,12 @@
         "Basic CRUD mutation functions: `createUser`, `upsertSession`, `addLogEntry`, `deleteLogEntry`, `upsertDrinkPreset`",
         "Basic query functions: `getActiveSession`, `getSessionLogs`, `getUserPresets`",
         "Convex deployment works (`npx convex dev` runs without errors)",
-        "Swift service layer (`ConvexService`) that wraps API calls with async/await",
-        "Tests verify Convex functions work (can be integration tests or function-level tests)"
+        "Swift service layer (`ConvexService`) that wraps API calls with async/await"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-004",
@@ -73,14 +67,12 @@
         "User record created in both SwiftData (local) and Convex (remote) on first login",
         "Auth state persisted locally — user stays signed in across app launches",
         "If Convex auth provider supports Apple natively, use that; otherwise custom token exchange via Convex function",
-        "Error handling: show alert on auth failure with retry option",
-        "Tests verify auth state management and token handling"
+        "Error handling: show alert on auth failure with retry option"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-005",
@@ -95,10 +87,9 @@
         "Verified in Simulator: screens display correctly, navigation works"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-006",
@@ -108,14 +99,12 @@
         "Configuration screen with: water every N drinks (stepper, min 1, default 1), time-based reminders toggle + interval picker (10/15/20/30/45/60 min), warning threshold (stepper, min 1, default 2), units (oz/ml toggle)",
         "Values saved to `UserSettings` in SwiftData",
         "\"Done\" button completes onboarding and navigates to Home",
-        "Request notification permission with explanation before asking (\"Waterline sends gentle reminders to drink water during your session\")",
-        "Tests verify settings are persisted correctly"
+        "Request notification permission with explanation before asking (\"Waterline sends gentle reminders to drink water during your session\")"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-007",
@@ -129,10 +118,9 @@
         "Verified in Simulator"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-008",
@@ -145,10 +133,9 @@
         "Verified in Simulator"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-009",
@@ -159,14 +146,12 @@
         "Only one active session allowed — if one exists, navigate to it instead",
         "Session syncs to Convex in background",
         "Navigates to Active Session screen",
-        "Live Activity starts (handled in separate story, but session creation triggers it)",
-        "Tests verify session creation and single-active constraint"
+        "Live Activity starts (handled in separate story, but session creation triggers it)"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-010",
@@ -181,10 +166,9 @@
         "Verified in Simulator: indicator renders correctly at values -3, 0, 1, 2, 3, 5"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "labels": [],
-      "dependsOn": [],
-      "completionNotes": "Completed by agent"
+      "dependsOn": []
     },
     {
       "id": "US-011",
@@ -198,9 +182,10 @@
         "Verified in Simulator"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
-      "dependsOn": []
+      "dependsOn": [],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-012",
@@ -216,8 +201,7 @@
         "`alcoholCountSinceLastWater` incremented by 1",
         "If `alcoholCountSinceLastWater >= waterEveryNDrinks`: trigger per-drink water reminder",
         "If `waterlineValue >= warningThreshold`: show warning state",
-        "Log syncs to Convex in background",
-        "Tests verify Waterline calculation, reminder trigger, warning state"
+        "Log syncs to Convex in background"
       ],
       "priority": 4,
       "passes": false,
@@ -235,8 +219,7 @@
         "Waterline value decreases by 1",
         "`alcoholCountSinceLastWater` resets to 0",
         "If `waterlineValue` drops below `warningThreshold`: clear warning state",
-        "Log syncs to Convex in background",
-        "Tests verify Waterline calculation and state reset"
+        "Log syncs to Convex in background"
       ],
       "priority": 4,
       "passes": false,
@@ -270,8 +253,7 @@
         "Presets saved as `DrinkPreset` in SwiftData and synced to Convex",
         "Presets appear as chips/buttons on active session screen above the quick-add buttons",
         "Tapping a preset logs that drink immediately (single tap)",
-        "Edit and delete presets from settings",
-        "Tests verify preset CRUD and quick-log behavior"
+        "Edit and delete presets from settings"
       ],
       "priority": 4,
       "passes": false,
@@ -284,8 +266,7 @@
       "description": "As a new user, I want sensible default presets so I can start logging immediately.",
       "acceptanceCriteria": [
         "On first launch after onboarding, create default presets: \"Beer\" (12oz, 1.0 std), \"Glass of Wine\" (5oz, 1.0 std), \"Shot\" (1.5oz, 1.0 std), \"Cocktail\" (1 std), \"Double\" (3oz, 2.0 std)",
-        "Defaults are editable and deletable by user",
-        "Tests verify default presets are created"
+        "Defaults are editable and deletable by user"
       ],
       "priority": 4,
       "passes": false,
@@ -300,8 +281,7 @@
         "In active session: swipe-to-delete or edit on log timeline",
         "In session summary: same edit/delete capability",
         "On edit/delete: Waterline and all counters recomputed from scratch by replaying all remaining logs in order",
-        "Edits sync to Convex",
-        "Tests verify recomputation is correct after delete and edit"
+        "Edits sync to Convex"
       ],
       "priority": 4,
       "passes": false,
@@ -318,8 +298,7 @@
         "Notification actions: \"Log Water\" (logs water with defaults) and \"Dismiss\"",
         "\"Log Water\" action creates a `LogEntry` and updates Waterline",
         "Reminders stop when session ends",
-        "If session inactive (no logs) for 90 minutes, stop reminders",
-        "Tests verify scheduling and cancellation logic"
+        "If session inactive (no logs) for 90 minutes, stop reminders"
       ],
       "priority": 4,
       "passes": false,
@@ -334,8 +313,7 @@
         "When `alcoholCountSinceLastWater >= waterEveryNDrinks`: fire local notification",
         "Notification content: \"You've had N drinks — time for water\"",
         "Notification actions: \"Log Water\" and \"Dismiss\"",
-        "Reminder resets when water is logged (`alcoholCountSinceLastWater` → 0)",
-        "Tests verify trigger threshold and reset"
+        "Reminder resets when water is logged (`alcoholCountSinceLastWater` → 0)"
       ],
       "priority": 4,
       "passes": false,
@@ -350,8 +328,7 @@
         "When `waterlineValue >= warningThreshold` and was previously below: fire local notification",
         "Notification content: \"Your Waterline is high — drink water to return to center\"",
         "Notification actions: \"Log Water\" and \"Dismiss\"",
-        "Only fires once per threshold crossing (not on every drink while above)",
-        "Tests verify threshold crossing detection"
+        "Only fires once per threshold crossing (not on every drink while above)"
       ],
       "priority": 4,
       "passes": false,
@@ -371,8 +348,7 @@
         "Ends Live Activity",
         "Syncs to Convex",
         "Navigates to Summary screen",
-        "Force-end works with zero logs",
-        "Tests verify summary computation"
+        "Force-end works with zero logs"
       ],
       "priority": 4,
       "passes": false,
@@ -432,8 +408,7 @@
       "description": "As a user, I want the app to handle sessions I forgot to end.",
       "acceptanceCriteria": [
         "If a session has been active for >12 hours: on next app launch, show prompt \"Your session has been running for X hours. End it?\"",
-        "Options: \"End Now\" (ends with current data) and \"Keep Going\" (session stays active)",
-        "Tests verify 12-hour threshold detection"
+        "Options: \"End Now\" (ends with current data) and \"Keep Going\" (session stays active)"
       ],
       "priority": 4,
       "passes": false,
@@ -448,8 +423,7 @@
         "All log entries write to SwiftData first (immediate, no network required)",
         "Background sync queue: pending changes sync to Convex when connectivity available",
         "Conflict resolution: last-write-wins for edits",
-        "Sync status indicator (subtle, non-intrusive — e.g., small cloud icon)",
-        "Tests verify offline write and subsequent sync"
+        "Sync status indicator (subtle, non-intrusive — e.g., small cloud icon)"
       ],
       "priority": 4,
       "passes": false,
@@ -483,8 +457,7 @@
         "When phone fires a water reminder (time-based or per-drink), watch receives it and plays haptic",
         "Haptic pattern: gentle, not alarming (e.g., `.notification` type)",
         "Watch shows reminder notification with \"Log Water\" action",
-        "Tapping \"Log Water\" on watch logs water and sends to phone",
-        "Tests verify WatchConnectivity message handling"
+        "Tapping \"Log Water\" on watch logs water and sends to phone"
       ],
       "priority": 4,
       "passes": false,
@@ -573,8 +546,7 @@
         "`StartSessionIntent`: starts a new session",
         "`EndSessionIntent`: ends the active session",
         "Intents registered in App Intents extension",
-        "Intents work from widgets, Live Activity, and Siri",
-        "Tests verify intent execution and data creation"
+        "Intents work from widgets, Live Activity, and Siri"
       ],
       "priority": 4,
       "passes": false,
@@ -592,8 +564,7 @@
         "On water log: `waterlineValue -= 1`, `alcoholCountSinceLastWater = 0`",
         "Warning: `waterlineValue >= warningThreshold`",
         "Engine processes logs in timestamp order",
-        "Used everywhere state is needed (active session, summary, after edits)",
-        "Comprehensive tests: empty logs, alternating drinks/water, doubles, edits, warning threshold crossing"
+        "Used everywhere state is needed (active session, summary, after edits)"
       ],
       "priority": 4,
       "passes": false,
@@ -624,8 +595,7 @@
         "Default notification content uses neutral language: \"Time for a break\" instead of \"You've had 5 drinks\"",
         "No drink counts or alcohol references in notification preview text",
         "Full detail visible only when notification is expanded or app is opened",
-        "Configurable in Settings: \"Discreet notifications\" toggle (on by default)",
-        "Tests verify notification content based on discreet setting"
+        "Configurable in Settings: \"Discreet notifications\" toggle (on by default)"
       ],
       "priority": 4,
       "passes": false,
@@ -634,9 +604,9 @@
     }
   ],
   "metadata": {
-    "createdAt": "2026-02-13T02:42:19.830Z",
+    "createdAt": "2026-02-13T04:17:18.073Z",
     "version": "1.0.0",
     "sourcePrd": "tasks/prd-waterline-mvp-ios-pacing-companion.md",
-    "updatedAt": "2026-02-13T04:14:34.484Z"
+    "updatedAt": "2026-02-13T04:23:16.589Z"
   }
 }

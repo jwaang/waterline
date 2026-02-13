@@ -2098,3 +2098,411 @@ struct StartSessionNavigationTests {
         #expect(results[0].startTime <= Date())
     }
 }
+
+// MARK: - US-011: Counters and Reminder Status Tests
+
+@Suite("Alcohol Count Since Last Water")
+struct AlcoholCountSinceLastWaterTests {
+    /// Helper matching the computation in ActiveSessionView/HomeView
+    private func alcoholCountSinceLastWater(for session: Session) -> Int {
+        var count = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol {
+                count += 1
+            } else if entry.type == .water {
+                count = 0
+            }
+        }
+        return count
+    }
+
+    @Test("Zero when no log entries")
+    func zeroWithNoEntries() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        context.insert(session)
+        try context.save()
+        #expect(alcoholCountSinceLastWater(for: session) == 0)
+    }
+
+    @Test("Counts consecutive alcohol entries without water")
+    func consecutiveAlcohol() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        for i in 0..<3 {
+            let drink = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .alcohol,
+                alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+            )
+            drink.session = session
+            context.insert(drink)
+        }
+        context.insert(session)
+        try context.save()
+        #expect(alcoholCountSinceLastWater(for: session) == 3)
+    }
+
+    @Test("Resets to zero after water log")
+    func resetsAfterWater() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink1 = LogEntry(
+            timestamp: Date().addingTimeInterval(-300),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        let drink2 = LogEntry(
+            timestamp: Date().addingTimeInterval(-200),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .wine, sizeOz: 5.0, standardDrinkEstimate: 1.0)
+        )
+        let water = LogEntry(
+            timestamp: Date().addingTimeInterval(-100),
+            type: .water,
+            waterMeta: WaterMeta(amountOz: 8.0)
+        )
+        for entry in [drink1, drink2, water] {
+            entry.session = session
+            context.insert(entry)
+        }
+        context.insert(session)
+        try context.save()
+        #expect(alcoholCountSinceLastWater(for: session) == 0)
+    }
+
+    @Test("Counts only drinks after last water")
+    func countsAfterLastWater() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink1 = LogEntry(
+            timestamp: Date().addingTimeInterval(-400),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        let water = LogEntry(
+            timestamp: Date().addingTimeInterval(-300),
+            type: .water,
+            waterMeta: WaterMeta(amountOz: 8.0)
+        )
+        let drink2 = LogEntry(
+            timestamp: Date().addingTimeInterval(-200),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .wine, sizeOz: 5.0, standardDrinkEstimate: 1.0)
+        )
+        let drink3 = LogEntry(
+            timestamp: Date().addingTimeInterval(-100),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .liquor, sizeOz: 1.5, standardDrinkEstimate: 1.0)
+        )
+        for entry in [drink1, water, drink2, drink3] {
+            entry.session = session
+            context.insert(entry)
+        }
+        context.insert(session)
+        try context.save()
+        #expect(alcoholCountSinceLastWater(for: session) == 2)
+    }
+
+    @Test("Only water entries gives zero")
+    func onlyWater() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        for i in 0..<3 {
+            let water = LogEntry(
+                timestamp: Date().addingTimeInterval(Double(i) * 60),
+                type: .water,
+                waterMeta: WaterMeta(amountOz: 8.0)
+            )
+            water.session = session
+            context.insert(water)
+        }
+        context.insert(session)
+        try context.save()
+        #expect(alcoholCountSinceLastWater(for: session) == 0)
+    }
+}
+
+@Suite("Water Due In Drinks Calculation")
+struct WaterDueInDrinksTests {
+    private func alcoholCountSinceLastWater(for session: Session) -> Int {
+        var count = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol {
+                count += 1
+            } else if entry.type == .water {
+                count = 0
+            }
+        }
+        return count
+    }
+
+    @Test("Water due in N drinks with default settings (waterEveryNDrinks=1)")
+    func waterDueDefault() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        context.insert(session)
+        try context.save()
+
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = UserSettings().waterEveryNDrinks // default 1
+        let remaining = max(waterEveryN - sinceLastWater, 0)
+        #expect(remaining == 1) // No drinks yet, due in 1 drink
+    }
+
+    @Test("Water due now when alcoholCountSinceLastWater >= waterEveryNDrinks")
+    func waterDueNow() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink = LogEntry(
+            timestamp: Date(),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        drink.session = session
+        context.insert(session)
+        context.insert(drink)
+        try context.save()
+
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = 1 // default
+        let remaining = max(waterEveryN - sinceLastWater, 0)
+        #expect(remaining == 0) // Water due now
+    }
+
+    @Test("Water due in 2 drinks with waterEveryNDrinks=3 and 1 drink logged")
+    func waterDueCustomN() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink = LogEntry(
+            timestamp: Date(),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        drink.session = session
+        context.insert(session)
+        context.insert(drink)
+        try context.save()
+
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = 3
+        let remaining = max(waterEveryN - sinceLastWater, 0)
+        #expect(sinceLastWater == 1)
+        #expect(remaining == 2) // Due in 2 more drinks
+    }
+
+    @Test("Water due resets after logging water")
+    func waterDueResetsAfterWater() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink = LogEntry(
+            timestamp: Date().addingTimeInterval(-200),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        let water = LogEntry(
+            timestamp: Date().addingTimeInterval(-100),
+            type: .water,
+            waterMeta: WaterMeta(amountOz: 8.0)
+        )
+        drink.session = session
+        water.session = session
+        context.insert(session)
+        context.insert(drink)
+        context.insert(water)
+        try context.save()
+
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = 1
+        let remaining = max(waterEveryN - sinceLastWater, 0)
+        #expect(sinceLastWater == 0)
+        #expect(remaining == 1) // Reset: due in 1 drink
+    }
+}
+
+@Suite("Next Time-Based Reminder Countdown")
+struct NextReminderCountdownTests {
+    /// Helper matching the computation in ActiveSessionView/HomeView
+    private func nextReminderCountdown(for session: Session, intervalMinutes: Int, now: Date) -> String {
+        let intervalSeconds = Double(intervalMinutes) * 60
+        let sortedEntries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+        let lastLogTime = sortedEntries.last?.timestamp ?? session.startTime
+        let nextReminderTime = lastLogTime.addingTimeInterval(intervalSeconds)
+        let remaining = nextReminderTime.timeIntervalSince(now)
+
+        if remaining <= 0 {
+            return "now"
+        }
+
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    @Test("Countdown from session start with no logs")
+    func countdownFromSessionStart() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let sessionStart = Date()
+        let session = Session(startTime: sessionStart, isActive: true)
+        context.insert(session)
+        try context.save()
+
+        // 20 minutes from session start, checked 5 minutes later
+        let now = sessionStart.addingTimeInterval(5 * 60)
+        let result = nextReminderCountdown(for: session, intervalMinutes: 20, now: now)
+        #expect(result == "15:00") // 15 minutes remaining
+    }
+
+    @Test("Countdown resets from last log entry")
+    func countdownResetsFromLastLog() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let referenceTime = Date()
+        let sessionStart = referenceTime.addingTimeInterval(-600)
+        let session = Session(startTime: sessionStart, isActive: true)
+        let lastLogTime = referenceTime.addingTimeInterval(-120) // 2 min before reference
+        let drink = LogEntry(
+            timestamp: lastLogTime,
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        drink.session = session
+        context.insert(session)
+        context.insert(drink)
+        try context.save()
+
+        // 20-minute interval, last log was 2 min before referenceTime → 18 min remaining
+        let result = nextReminderCountdown(for: session, intervalMinutes: 20, now: referenceTime)
+        #expect(result == "18:00")
+    }
+
+    @Test("Returns 'now' when countdown has elapsed")
+    func countdownElapsed() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let sessionStart = Date().addingTimeInterval(-3600) // 1 hour ago
+        let session = Session(startTime: sessionStart, isActive: true)
+        context.insert(session)
+        try context.save()
+
+        // 20-minute interval from 1 hour ago = well past due
+        let result = nextReminderCountdown(for: session, intervalMinutes: 20, now: Date())
+        #expect(result == "now")
+    }
+
+    @Test("Countdown with different interval minutes")
+    func countdownDifferentIntervals() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let sessionStart = Date()
+        let session = Session(startTime: sessionStart, isActive: true)
+        context.insert(session)
+        try context.save()
+
+        let now = sessionStart.addingTimeInterval(5 * 60) // 5 min in
+
+        let result10 = nextReminderCountdown(for: session, intervalMinutes: 10, now: now)
+        #expect(result10 == "5:00") // 10 - 5 = 5 min
+
+        let result30 = nextReminderCountdown(for: session, intervalMinutes: 30, now: now)
+        #expect(result30 == "25:00") // 30 - 5 = 25 min
+
+        let result60 = nextReminderCountdown(for: session, intervalMinutes: 60, now: now)
+        #expect(result60 == "55:00") // 60 - 5 = 55 min
+    }
+}
+
+@Suite("Counters Update on Log Addition")
+struct CountersUpdateOnLogTests {
+    @Test("Adding alcohol log increments drink count and alcoholCountSinceLastWater")
+    func alcoholLogIncrementsCounters() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        context.insert(session)
+        try context.save()
+
+        // Before: 0 drinks
+        #expect(session.logEntries.filter { $0.type == .alcohol }.count == 0)
+
+        // Add a drink
+        let drink = LogEntry(
+            timestamp: Date(),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        drink.session = session
+        context.insert(drink)
+        try context.save()
+
+        // After: 1 drink
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+        #expect(s.logEntries.filter { $0.type == .alcohol }.count == 1)
+        #expect(s.logEntries.filter { $0.type == .water }.count == 0)
+
+        // alcoholCountSinceLastWater = 1
+        var sinceLastWater = 0
+        for entry in s.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol { sinceLastWater += 1 }
+            else if entry.type == .water { sinceLastWater = 0 }
+        }
+        #expect(sinceLastWater == 1)
+    }
+
+    @Test("Adding water log increments water count and resets alcoholCountSinceLastWater")
+    func waterLogResetsCounter() throws {
+        let container = try makeContainer()
+        let context = ModelContext(container)
+        let session = Session(isActive: true)
+        let drink = LogEntry(
+            timestamp: Date().addingTimeInterval(-200),
+            type: .alcohol,
+            alcoholMeta: AlcoholMeta(drinkType: .beer, sizeOz: 12.0, standardDrinkEstimate: 1.0)
+        )
+        drink.session = session
+        context.insert(session)
+        context.insert(drink)
+        try context.save()
+
+        // Before water: 1 drink, alcoholCountSinceLastWater = 1
+        #expect(session.logEntries.filter { $0.type == .alcohol }.count == 1)
+
+        // Add water
+        let water = LogEntry(
+            timestamp: Date(),
+            type: .water,
+            waterMeta: WaterMeta(amountOz: 8.0)
+        )
+        water.session = session
+        context.insert(water)
+        try context.save()
+
+        let fetched = try context.fetch(FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        ))
+        let s = fetched[0]
+        #expect(s.logEntries.filter { $0.type == .alcohol }.count == 1)
+        #expect(s.logEntries.filter { $0.type == .water }.count == 1)
+
+        // alcoholCountSinceLastWater resets to 0
+        var sinceLastWater = 0
+        for entry in s.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol { sinceLastWater += 1 }
+            else if entry.type == .water { sinceLastWater = 0 }
+        }
+        #expect(sinceLastWater == 0)
+    }
+}

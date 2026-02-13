@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ActiveSessionView: View {
     let sessionId: UUID
@@ -8,8 +9,11 @@ struct ActiveSessionView: View {
     @Query private var users: [User]
     @Environment(\.modelContext) private var modelContext
 
+    @State private var now = Date()
+
     private var session: Session? { sessions.first }
-    private var warningThreshold: Int { users.first?.settings.warningThreshold ?? 2 }
+    private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
+    private var warningThreshold: Int { userSettings.warningThreshold }
 
     init(sessionId: UUID) {
         self.sessionId = sessionId
@@ -26,6 +30,9 @@ struct ActiveSessionView: View {
         }
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
+            now = time
+        }
     }
 
     // MARK: - Session Content
@@ -37,6 +44,8 @@ struct ActiveSessionView: View {
             WaterlineIndicator(value: waterlineValue(for: session), warningThreshold: warningThreshold)
 
             countsSection(for: session)
+
+            reminderStatusSection(for: session)
 
             quickAddButtons
 
@@ -62,6 +71,100 @@ struct ActiveSessionView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: - Reminder Status
+
+    private func reminderStatusSection(for session: Session) -> some View {
+        VStack(spacing: 8) {
+            waterDueText(for: session)
+            nextReminderText(for: session)
+        }
+    }
+
+    private func waterDueText(for session: Session) -> some View {
+        let sinceLastWater = alcoholCountSinceLastWater(for: session)
+        let waterEveryN = userSettings.waterEveryNDrinks
+        let remaining = max(waterEveryN - sinceLastWater, 0)
+
+        return HStack(spacing: 4) {
+            Image(systemName: "drop")
+                .foregroundStyle(.blue)
+            if remaining == 0 {
+                Text("Water due now")
+                    .foregroundStyle(.orange)
+            } else {
+                Text("Water due in: \(remaining) drink\(remaining == 1 ? "" : "s")")
+            }
+        }
+        .font(.subheadline)
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private func nextReminderText(for session: Session) -> some View {
+        if userSettings.timeRemindersEnabled {
+            let countdown = nextReminderCountdown(for: session)
+            HStack(spacing: 4) {
+                Image(systemName: "bell")
+                    .foregroundStyle(.purple)
+                Text("Next reminder: \(countdown)")
+            }
+            .font(.subheadline)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    // MARK: - Pacing Computation
+
+    private func alcoholCountSinceLastWater(for session: Session) -> Int {
+        var count = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol {
+                count += 1
+            } else if entry.type == .water {
+                count = 0
+            }
+        }
+        return count
+    }
+
+    private func nextReminderCountdown(for session: Session) -> String {
+        let intervalSeconds = Double(userSettings.timeReminderIntervalMinutes) * 60
+        let sortedEntries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+        let lastLogTime = sortedEntries.last?.timestamp ?? session.startTime
+        let nextReminderTime = lastLogTime.addingTimeInterval(intervalSeconds)
+        let remaining = nextReminderTime.timeIntervalSince(now)
+
+        if remaining <= 0 {
+            return "now"
+        }
+
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    // MARK: - Waterline Computation
+
+    private func waterlineValue(for session: Session) -> Double {
+        var value: Double = 0
+        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                value += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                value -= 1
+            }
+        }
+        return value
+    }
+
+    private func drinkCount(for session: Session) -> Int {
+        session.logEntries.filter { $0.type == .alcohol }.count
+    }
+
+    private func waterCount(for session: Session) -> Int {
+        session.logEntries.filter { $0.type == .water }.count
     }
 
     private var quickAddButtons: some View {
@@ -90,28 +193,6 @@ struct ActiveSessionView: View {
             .tint(.blue)
             .accessibilityLabel("Add Water")
         }
-    }
-
-    // MARK: - Waterline Computation
-
-    private func waterlineValue(for session: Session) -> Double {
-        var value: Double = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                value += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                value -= 1
-            }
-        }
-        return value
-    }
-
-    private func drinkCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .alcohol }.count
-    }
-
-    private func waterCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .water }.count
     }
 }
 

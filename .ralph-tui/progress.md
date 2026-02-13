@@ -212,3 +212,24 @@ after each iteration and it's included in prompts for context.
   - The indicator's visual logic (GeometryReader fill, clamping to ±5, center-relative positioning) was already correct from US-008 — tests validated all edge cases
 ---
 
+## Feb 12, 2026 - US-011
+- What was implemented:
+  - `ActiveSessionView` enhanced with reminder status section: "Water due in: X drinks" pacing counter and "Next reminder: X:XX" countdown timer
+  - `HomeView` active session content updated with same reminder status section for consistency
+  - `alcoholCountSinceLastWater()` computation: iterates log entries in timestamp order, counts alcohol entries, resets on water
+  - `nextReminderCountdown()` computation: calculates time from last log entry (or session start) plus interval, formats as "M:SS" or "now"
+  - `@State private var now = Date()` with 1-second Timer for live countdown updates in both views
+  - `userSettings` computed property replaces separate `warningThreshold` — provides access to all settings (waterEveryNDrinks, timeRemindersEnabled, timeReminderIntervalMinutes)
+  - 15 new tests across 4 suites: Alcohol Count Since Last Water (5), Water Due In Drinks Calculation (4), Next Time-Based Reminder Countdown (4), Counters Update on Log Addition (2)
+  - All 129 tests pass across 37 suites
+- Files changed:
+  - `Waterline/ActiveSessionView.swift` (modified — added reminder status section, timer, pacing computation)
+  - `Waterline/HomeView.swift` (modified — added reminder status section, timer, pacing computation)
+  - `WaterlineTests/WaterlineTests.swift` (added 15 tests)
+- **Learnings:**
+  - Timer-based countdown tests must use a fixed reference `Date()` captured once, not `Date()` at multiple call sites — avoids sub-second timing drift causing "17:59" vs "18:00" failures
+  - `Timer.publish(every: 1, on: .main, in: .common).autoconnect()` with `onReceive` is the standard SwiftUI pattern for live countdown displays — no need for `ObservableObject` or custom timer manager
+  - `alcoholCountSinceLastWater` must process entries in timestamp order (same as waterline computation) — the running count resets on each water entry, leaving only the count since the most recent water
+  - Reminder countdown uses last log entry timestamp as the anchor, not session start — this means the countdown "resets" each time the user logs anything, which is intuitive (you just interacted, so the next reminder is interval-from-now)
+---
+

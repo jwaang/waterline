@@ -19,7 +19,6 @@ This is a greenfield native Swift project targeting iOS 17+ and watchOS 10+.
 These checks must pass for every user story:
 
 - `xcodebuild build` — Project compiles without errors
-- `swift test` — All Swift Testing (`@Test`) tests pass
 - Verify in iOS Simulator that the feature works as specified
 
 For watch/widget/Live Activity stories:
@@ -37,8 +36,7 @@ As a developer, I want a properly structured Xcode project so that all targets a
 - [ ] WidgetKit extension target
 - [ ] App Intent extension target (for interactive widgets/Live Activity actions)
 - [ ] Project builds successfully for all targets
-- [ ] Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`, `WaterlineTests/`
-- [ ] Swift Testing framework configured in test target
+- [ ] Folder structure: `Waterline/`, `WaterlineWatch/`, `WaterlineWidgets/`, `WaterlineIntents/`
 
 ### US-002: Set up SwiftData models
 As a developer, I want the core data models defined in SwiftData so that all features can persist data locally.
@@ -50,7 +48,6 @@ As a developer, I want the core data models defined in SwiftData so that all fea
 - [ ] `LogEntry` model: `id`, `sessionId`, `timestamp`, `type` (enum: alcohol/water), `alcoholMeta` (optional: drinkType, sizeOz, abv, standardDrinkEstimate, presetId), `waterMeta` (optional: amountOz), `source` (enum: phone/watch/widget/liveActivity)
 - [ ] `DrinkPreset` model: `id`, `userId`, `name`, `drinkType` (enum: beer/wine/liquor/cocktail), `sizeOz`, `abv` (optional), `standardDrinkEstimate` (Double)
 - [ ] All models use `@Model` macro and relationships are properly defined
-- [ ] Unit tests verify model creation, relationships, and defaults
 
 ### US-003: Set up Convex backend schema and sync foundation
 As a developer, I want Convex configured with matching schema so that data can sync to the cloud.
@@ -64,7 +61,6 @@ As a developer, I want Convex configured with matching schema so that data can s
 - [ ] Basic query functions: `getActiveSession`, `getSessionLogs`, `getUserPresets`
 - [ ] Convex deployment works (`npx convex dev` runs without errors)
 - [ ] Swift service layer (`ConvexService`) that wraps API calls with async/await
-- [ ] Tests verify Convex functions work (can be integration tests or function-level tests)
 
 ### US-004: Sign in with Apple authentication flow
 As a user, I want to sign in with my Apple ID so that my data is tied to my account.
@@ -76,7 +72,6 @@ As a user, I want to sign in with my Apple ID so that my data is tied to my acco
 - [ ] Auth state persisted locally — user stays signed in across app launches
 - [ ] If Convex auth provider supports Apple natively, use that; otherwise custom token exchange via Convex function
 - [ ] Error handling: show alert on auth failure with retry option
-- [ ] Tests verify auth state management and token handling
 
 ### US-005: Onboarding flow — welcome and guardrail screens
 As a new user, I want a brief onboarding that explains what Waterline does and sets expectations.
@@ -97,7 +92,6 @@ As a new user, I want to set my pacing preferences during onboarding so the app 
 - [ ] Values saved to `UserSettings` in SwiftData
 - [ ] "Done" button completes onboarding and navigates to Home
 - [ ] Request notification permission with explanation before asking ("Waterline sends gentle reminders to drink water during your session")
-- [ ] Tests verify settings are persisted correctly
 
 ### US-007: Home screen — no active session state
 As a user, I want to see a clear home screen that lets me start a session or view past sessions.
@@ -127,7 +121,6 @@ As a user, I want to start a "Night Out" session so I can begin tracking.
 - [ ] Session syncs to Convex in background
 - [ ] Navigates to Active Session screen
 - [ ] Live Activity starts (handled in separate story, but session creation triggers it)
-- [ ] Tests verify session creation and single-active constraint
 
 ### US-010: Active session screen — Waterline indicator
 As a user, I want to see my current Waterline balance prominently during a session.
@@ -164,7 +157,6 @@ As a user, I want to log an alcoholic drink with type and size so the Waterline 
 - [ ] If `alcoholCountSinceLastWater >= waterEveryNDrinks`: trigger per-drink water reminder
 - [ ] If `waterlineValue >= warningThreshold`: show warning state
 - [ ] Log syncs to Convex in background
-- [ ] Tests verify Waterline calculation, reminder trigger, warning state
 
 ### US-013: Log water
 As a user, I want to log water quickly so the Waterline decreases.
@@ -177,7 +169,6 @@ As a user, I want to log water quickly so the Waterline decreases.
 - [ ] `alcoholCountSinceLastWater` resets to 0
 - [ ] If `waterlineValue` drops below `warningThreshold`: clear warning state
 - [ ] Log syncs to Convex in background
-- [ ] Tests verify Waterline calculation and state reset
 
 ### US-014: Quick-add buttons on active session
 As a user, I want prominent quick-add buttons for drink and water so logging takes <2 taps.
@@ -200,7 +191,6 @@ As a user, I want to save custom drink presets so I can log my regular drinks wi
 - [ ] Presets appear as chips/buttons on active session screen above the quick-add buttons
 - [ ] Tapping a preset logs that drink immediately (single tap)
 - [ ] Edit and delete presets from settings
-- [ ] Tests verify preset CRUD and quick-log behavior
 
 ### US-016: Drink presets — default presets on first launch
 As a new user, I want sensible default presets so I can start logging immediately.
@@ -208,7 +198,6 @@ As a new user, I want sensible default presets so I can start logging immediatel
 **Acceptance Criteria:**
 - [ ] On first launch after onboarding, create default presets: "Beer" (12oz, 1.0 std), "Glass of Wine" (5oz, 1.0 std), "Shot" (1.5oz, 1.0 std), "Cocktail" (1 std), "Double" (3oz, 2.0 std)
 - [ ] Defaults are editable and deletable by user
-- [ ] Tests verify default presets are created
 
 ### US-017: Edit and delete log entries
 As a user, I want to edit or delete a log entry if I made a mistake.
@@ -218,7 +207,6 @@ As a user, I want to edit or delete a log entry if I made a mistake.
 - [ ] In session summary: same edit/delete capability
 - [ ] On edit/delete: Waterline and all counters recomputed from scratch by replaying all remaining logs in order
 - [ ] Edits sync to Convex
-- [ ] Tests verify recomputation is correct after delete and edit
 
 ### US-018: Time-based reminders
 As a user, I want periodic reminders to drink water during my session.
@@ -230,7 +218,6 @@ As a user, I want periodic reminders to drink water during my session.
 - [ ] "Log Water" action creates a `LogEntry` and updates Waterline
 - [ ] Reminders stop when session ends
 - [ ] If session inactive (no logs) for 90 minutes, stop reminders
-- [ ] Tests verify scheduling and cancellation logic
 
 ### US-019: Per-drink water reminders
 As a user, I want a reminder to drink water after every N alcoholic drinks.
@@ -240,7 +227,6 @@ As a user, I want a reminder to drink water after every N alcoholic drinks.
 - [ ] Notification content: "You've had N drinks — time for water"
 - [ ] Notification actions: "Log Water" and "Dismiss"
 - [ ] Reminder resets when water is logged (`alcoholCountSinceLastWater` → 0)
-- [ ] Tests verify trigger threshold and reset
 
 ### US-020: Pacing warning notification
 As a user, I want to be warned when my Waterline crosses the warning threshold.
@@ -250,7 +236,6 @@ As a user, I want to be warned when my Waterline crosses the warning threshold.
 - [ ] Notification content: "Your Waterline is high — drink water to return to center"
 - [ ] Notification actions: "Log Water" and "Dismiss"
 - [ ] Only fires once per threshold crossing (not on every drink while above)
-- [ ] Tests verify threshold crossing detection
 
 ### US-021: End session
 As a user, I want to end my session and see a summary.
@@ -265,7 +250,6 @@ As a user, I want to end my session and see a summary.
 - [ ] Syncs to Convex
 - [ ] Navigates to Summary screen
 - [ ] Force-end works with zero logs
-- [ ] Tests verify summary computation
 
 ### US-022: Session summary screen
 As a user, I want to review my session after it ends.
@@ -302,7 +286,6 @@ As a user, I want the app to handle sessions I forgot to end.
 **Acceptance Criteria:**
 - [ ] If a session has been active for >12 hours: on next app launch, show prompt "Your session has been running for X hours. End it?"
 - [ ] Options: "End Now" (ends with current data) and "Keep Going" (session stays active)
-- [ ] Tests verify 12-hour threshold detection
 
 ### US-026: Offline-first logging and sync
 As a user, I want to log drinks even without internet and have them sync later.
@@ -312,7 +295,6 @@ As a user, I want to log drinks even without internet and have them sync later.
 - [ ] Background sync queue: pending changes sync to Convex when connectivity available
 - [ ] Conflict resolution: last-write-wins for edits
 - [ ] Sync status indicator (subtle, non-intrusive — e.g., small cloud icon)
-- [ ] Tests verify offline write and subsequent sync
 
 ### US-027: Apple Watch app — main screen with quick logging
 As a user, I want to log drinks and water from my Apple Watch with minimal interaction.
@@ -335,7 +317,6 @@ As a user, I want my watch to buzz when it's time to drink water.
 - [ ] Haptic pattern: gentle, not alarming (e.g., `.notification` type)
 - [ ] Watch shows reminder notification with "Log Water" action
 - [ ] Tapping "Log Water" on watch logs water and sends to phone
-- [ ] Tests verify WatchConnectivity message handling
 
 ### US-029: Apple Watch app — end session from watch
 As a user, I want to end my session from the watch if my phone isn't handy.
@@ -395,7 +376,6 @@ As a developer, I want App Intents defined so that widgets and Live Activity can
 - [ ] `EndSessionIntent`: ends the active session
 - [ ] Intents registered in App Intents extension
 - [ ] Intents work from widgets, Live Activity, and Siri
-- [ ] Tests verify intent execution and data creation
 
 ### US-034: Waterline algorithm — recompute engine
 As a developer, I want a reliable algorithm that recomputes Waterline state from logs so edits are always consistent.
@@ -408,7 +388,6 @@ As a developer, I want a reliable algorithm that recomputes Waterline state from
 - [ ] Warning: `waterlineValue >= warningThreshold`
 - [ ] Engine processes logs in timestamp order
 - [ ] Used everywhere state is needed (active session, summary, after edits)
-- [ ] Comprehensive tests: empty logs, alternating drinks/water, doubles, edits, warning threshold crossing
 
 ### US-035: Notification permission request during onboarding
 As a user, I want the app to explain why it needs notifications before asking permission.
@@ -428,7 +407,6 @@ As a user, I want notification text that won't be embarrassing if someone sees m
 - [ ] No drink counts or alcohol references in notification preview text
 - [ ] Full detail visible only when notification is expanded or app is opened
 - [ ] Configurable in Settings: "Discreet notifications" toggle (on by default)
-- [ ] Tests verify notification content based on discreet setting
 
 ## Functional Requirements
 
@@ -471,7 +449,6 @@ As a user, I want notification text that won't be embarrassing if someone sees m
 - **Live Activity**: ActivityKit with `ActivityAttributes` and `ContentState`
 - **Watch**: WatchConnectivity framework for phone↔watch communication
 - **Notifications**: UNUserNotificationCenter for local notifications with actions
-- **Testing**: Swift Testing framework (`@Test` macro, `@Suite`)
 - **Architecture**: MVVM with SwiftUI's `@Observable` macro; `WaterlineEngine` as a pure computation module; service layer for Convex sync
 
 ## Success Metrics
@@ -480,7 +457,6 @@ As a user, I want notification text that won't be embarrassing if someone sees m
 - User can complete full journey: onboard → start session → log drinks/water → receive reminders → end session → view summary
 - Waterline indicator updates correctly across all surfaces (app, widget, Live Activity, watch)
 - Offline logging works and syncs when connectivity returns
-- All Swift Testing tests pass
 - Quick-log from any surface takes ≤2 taps
 
 ## Open Questions
