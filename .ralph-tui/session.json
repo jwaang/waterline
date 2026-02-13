@@ -3,10 +3,10 @@
   "sessionId": "0c45dafe-e522-4ca3-9d2f-275102c83e8c",
   "status": "running",
   "startedAt": "2026-02-13T03:16:20.587Z",
-  "updatedAt": "2026-02-13T03:51:08.763Z",
-  "currentIteration": 10,
+  "updatedAt": "2026-02-13T03:56:30.371Z",
+  "currentIteration": 1,
   "maxIterations": 10,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -41,8 +41,8 @@
       {
         "id": "US-005",
         "title": "Onboarding flow — welcome and guardrail screens",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-006",
@@ -332,12 +332,21 @@
       "durationMs": 4656,
       "startedAt": "2026-02-13T03:38:52.398Z",
       "endedAt": "2026-02-13T03:38:57.054Z"
+    },
+    {
+      "iteration": 1,
+      "status": "completed",
+      "taskId": "US-005",
+      "taskTitle": "Onboarding flow — welcome and guardrail screens",
+      "taskCompleted": true,
+      "durationMs": 130334,
+      "startedAt": "2026-02-13T03:48:58.421Z",
+      "endedAt": "2026-02-13T03:51:08.755Z"
     }
   ],
   "skippedTaskIds": [],
   "cwd": "/Users/john/Desktop/waterline",
   "activeTaskIds": [
-    "US-006",
     "US-007",
     "US-008",
     "US-009",

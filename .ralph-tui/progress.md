@@ -95,3 +95,25 @@ after each iteration and it's included in prompts for context.
   - Embedding `SignInView` as the final onboarding page avoids duplicating the sign-in UI
 ---
 
+## Feb 12, 2026 - US-006
+- What was implemented:
+  - `ConfigureDefaultsView` with all settings controls: water every N drinks (stepper, 1-10), time-based reminders toggle + interval picker (10/15/20/30/45/60 min), warning threshold (stepper, 1-10), units (oz/ml segmented picker)
+  - `NotificationPermissionView` sheet with explanation text and Enable/Skip buttons, shown conditionally when time reminders are enabled
+  - Settings saved to `UserSettings` via SwiftData by fetching the authenticated user by `appleUserId`
+  - `RootView` updated: signed-in + not onboarded → `ConfigureDefaultsView`; "Done" callback sets `hasCompletedOnboarding = true`; removed old `onChange(of: isSignedIn)` auto-complete
+  - 11 new tests across 2 suites: ConfigureDefaults Settings Persistence (8 tests) and ConfigureDefaults Onboarding Completion (3 tests)
+  - Updated existing onboarding flow test to match new behavior (sign-in no longer auto-completes onboarding)
+  - XcodeGen regenerated to include new file
+  - All 75 tests pass across 24 suites
+- Files changed:
+  - `Waterline/ConfigureDefaultsView.swift` (new)
+  - `Waterline/ContentView.swift` (modified — RootView shows ConfigureDefaultsView for signedIn + !onboarded)
+  - `WaterlineTests/WaterlineTests.swift` (added 11 tests, updated 1 existing test)
+- **Learnings:**
+  - XcodeGen auto-includes new `.swift` files from `path: Waterline` source glob, but `xcodegen generate` must be re-run for the Xcode project to pick them up
+  - Configure defaults fits cleanly as a `signedIn + !hasCompletedOnboarding` branch in RootView rather than as another OnboardingPage — keeps auth state routing simple
+  - Notification permission request is best shown conditionally (only when time reminders enabled) to avoid unnecessary prompts
+  - SwiftData `User` settings can be updated by fetching the user by `appleUserId` and mutating embedded `UserSettings` struct fields directly — SwiftData tracks the changes
+  - `.sheet(isPresented:)` with `presentationDetents([.medium])` works well for a focused notification explanation modal
+---
+

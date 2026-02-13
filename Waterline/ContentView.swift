@@ -16,15 +16,17 @@ struct RootView: View {
                     OnboardingView(authManager: authManager)
                 }
             case .signedIn:
-                ContentView()
+                if hasCompletedOnboarding {
+                    ContentView()
+                } else {
+                    ConfigureDefaultsView(authManager: authManager) {
+                        hasCompletedOnboarding = true
+                    }
+                }
             }
         }
         .animation(.default, value: authManager.authState)
-        .onChange(of: authManager.isSignedIn) { _, isSignedIn in
-            if isSignedIn {
-                hasCompletedOnboarding = true
-            }
-        }
+        .animation(.default, value: hasCompletedOnboarding)
     }
 }
 

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0CF2000AC8E46EB7B1B99BDB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 45E1ECA5868A954E9047FD8A /* Assets.xcassets */; };
+		0D5F8C352CB2A1A3A4FD062C /* ConfigureDefaultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 418AFCC644115066C972174A /* ConfigureDefaultsView.swift */; };
 		2242C6E17B5696CA8415D967 /* WaterlineWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B8651BE0BE124C8A594A229 /* WaterlineWidgets.swift */; };
 		2445BC13687D271CED595BF4 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DF8AB6AC47AD0653B444B0 /* ContentView.swift */; };
 		25E077EA8883369CA510198E /* WaterlineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4BCF3199C5997EEF39BD43 /* WaterlineTests.swift */; };
@@ -82,6 +83,7 @@
 		06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineTimelineProvider.swift; sourceTree = "<group>"; };
 		20FA07103593D917FC1FECDE /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		3A047B8CE97B53FC6DC12BA0 /* WaterlineWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WaterlineWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		418AFCC644115066C972174A /* ConfigureDefaultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureDefaultsView.swift; sourceTree = "<group>"; };
 		45DD6621139B9298618E56EA /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
 		45E1ECA5868A954E9047FD8A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		57FBFAFDFF394F0980B0F734 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 			children = (
 				7660566AFF2B39C183B54857 /* Assets.xcassets */,
 				98D15AF08F7CE9A78C8D88B2 /* AuthenticationManager.swift */,
+				418AFCC644115066C972174A /* ConfigureDefaultsView.swift */,
 				88DF8AB6AC47AD0653B444B0 /* ContentView.swift */,
 				45DD6621139B9298618E56EA /* ConvexService.swift */,
 				8EA0B9A74998663E2DAFA317 /* Models.swift */,
@@ -343,6 +346,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C98E5F7B760FE0E56AE8A771 /* AuthenticationManager.swift in Sources */,
+				0D5F8C352CB2A1A3A4FD062C /* ConfigureDefaultsView.swift in Sources */,
 				2445BC13687D271CED595BF4 /* ContentView.swift in Sources */,
 				DEA443AEC286FA3E2B0AD169 /* ConvexService.swift in Sources */,
 				54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */,

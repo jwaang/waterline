@@ -1,26 +1,89 @@
-configVersion = "2.1"
-maxIterations = 10
+# .ralph-tui/config.toml
+# ─────────────────────────────────────────────
+# Core Settings
+# ─────────────────────────────────────────────
+
+# Default agent plugin name
 agent = "claude"
+
+# Custom command (optional) - use wrapper tools like Claude Code Router
+# command = "ccr code"
+
+# Default tracker plugin name
 tracker = "json"
+
+# Maximum iterations per session (0 = unlimited)
+maxIterations = 5
+
+# Delay between iterations in milliseconds
+iterationDelay = 1000
+
+# Output directory for iteration logs
+outputDir = ".ralph-tui/iterations"
+
+# Progress file for cross-iteration context
+progressFile = ".ralph-tui/progress.md"
+
+# Auto-commit
 autoCommit = true
-subagentTracingDetail = "full"
-defaultAgent = "claude"
+
+# Custom prompt template path (relative or absolute)
+# prompt_template = "./my-template.hbs"
+
+# Subagent tracing detail: "off", "minimal", "moderate", "full"
+subagentTracingDetail = "minimal"
+
+# Fallback agents when primary hits rate limits
+fallbackAgents = ["codex"]
+
+# ─────────────────────────────────────────────
+# Agent Options
+# ─────────────────────────────────────────────
 
 [agentOptions]
+# model = "claude-sonnet-4-20250514"
+
+# ─────────────────────────────────────────────
+# Tracker Options
+# ─────────────────────────────────────────────
+
 [trackerOptions]
-[notifications]
-sound = "system"
+path = "./prd.json"
 
-[parallel]
-mode = "auto"                           # auto | always | never
-maxWorkers = 1                          # Maximum concurrent workers
-directMerge = true                     # Merge directly to current branch (vs session branch)
+# ─────────────────────────────────────────────
+# Error Handling
+# ─────────────────────────────────────────────
 
-agent = "claude"
-fallbackAgents = ["codex"]
- 
+[errorHandling]
+strategy = "retry"
+maxRetries = 3
+retryDelayMs = 10000
+continueOnNonZeroExit = false
+
+# ─────────────────────────────────────────────
+# Rate Limit Handling
+# ─────────────────────────────────────────────
+
 [rateLimitHandling]
 enabled = true
 maxRetries = 3
-baseBackoffMs = 5000
+baseBackoffMs = 10000
 recoverPrimaryBetweenIterations = true
+
+# ─────────────────────────────────────────────
+# Notifications
+# ─────────────────────────────────────────────
+
+[notifications]
+enabled = true
+sound = "system"
+
+# ─────────────────────────────────────────────
+# Parallel Execution
+# ─────────────────────────────────────────────
+
+[parallel]
+mode = "auto"
+maxWorkers = 1
+directMerge = true
+worktreeDir = ".ralph-tui/worktrees"
