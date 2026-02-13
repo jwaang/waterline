@@ -5,7 +5,7 @@ after each iteration and it's included in prompts for context.
 
 ## Codebase Patterns (Study These First)
 
-- **SessionSummaryView** is used for both post-session (navigated from ActiveSessionView after endSession) and past session review (navigated from HomeView pastSessionsList). It takes a `sessionId: UUID` and queries via `#Predicate`.
+- **SessionSummaryView** is used for both post-session and past session review. It takes `sessionId: UUID` and `allowsEditing: Bool` (default `true`). HomeView passes `allowsEditing: false` for past sessions to enforce read-only mode.
 - **Duplicate declarations** have been a recurring issue in this codebase — always check for duplicated `@Query`, `@Environment`, computed properties, and methods before building.
 - **Recompute pattern**: When editing/deleting log entries in summary, recompute the `SessionSummary` by replaying all remaining entries in timestamp order, then save to `session.computedSummary`.
 - **Navigation routing**: HomeView uses `navigationDestination(for: UUID.self)` to route to either `ActiveSessionView` (if session is active) or `SessionSummaryView` (if ended).

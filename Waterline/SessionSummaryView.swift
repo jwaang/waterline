@@ -3,6 +3,7 @@ import SwiftData
 
 struct SessionSummaryView: View {
     let sessionId: UUID
+    let allowsEditing: Bool
 
     @Query private var sessions: [Session]
     @Query private var users: [User]
@@ -13,8 +14,9 @@ struct SessionSummaryView: View {
 
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
 
-    init(sessionId: UUID) {
+    init(sessionId: UUID, allowsEditing: Bool = true) {
         self.sessionId = sessionId
+        self.allowsEditing = allowsEditing
         _sessions = Query(filter: #Predicate<Session> { $0.id == sessionId })
     }
 
@@ -85,11 +87,15 @@ struct SessionSummaryView: View {
                     LogEntryRow(entry: entry)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            entryToEdit = entry
+                            if allowsEditing {
+                                entryToEdit = entry
+                            }
                         }
                 }
                 .onDelete { offsets in
-                    deleteEntries(offsets, from: sorted, session: session)
+                    if allowsEditing {
+                        deleteEntries(offsets, from: sorted, session: session)
+                    }
                 }
             }
         }

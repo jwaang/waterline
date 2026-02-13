@@ -499,7 +499,7 @@ struct HomeView: View {
         if activeSessions.contains(where: { $0.id == sessionId }) {
             ActiveSessionView(sessionId: sessionId, syncService: syncService)
         } else {
-            SessionSummaryView(sessionId: sessionId)
+            SessionSummaryView(sessionId: sessionId, allowsEditing: false)
         }
     }
 
