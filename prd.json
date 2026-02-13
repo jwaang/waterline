@@ -338,7 +338,7 @@
         "Only fires once per threshold crossing (not on every drink while above)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     },
@@ -614,6 +614,6 @@
     "createdAt": "2026-02-13T04:17:18.073Z",
     "version": "1.0.0",
     "sourcePrd": "tasks/prd-waterline-mvp-ios-pacing-companion.md",
-    "updatedAt": "2026-02-13T04:47:16.781Z"
+    "updatedAt": "2026-02-13T16:51:40.597Z"
   }
 }
