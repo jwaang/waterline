@@ -6,9 +6,7 @@ struct SessionSummaryView: View {
 
     @Query private var sessions: [Session]
     @Query private var users: [User]
-    @Query private var users: [User]
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.dismiss) private var dismiss
 
     @State private var entryToEdit: LogEntry?
@@ -34,13 +32,6 @@ struct SessionSummaryView: View {
         }
         .navigationTitle("Session Summary")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button("Done") {
-                    dismiss()
-                }
-            }
-        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") {
@@ -117,8 +108,6 @@ struct SessionSummaryView: View {
 
     // MARK: - Recompute Summary
 
-    private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
-
     private func recomputeSummary(for session: Session) {
         let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
 
@@ -153,30 +142,6 @@ struct SessionSummaryView: View {
             finalWaterlineValue: wlValue
         )
         try? modelContext.save()
-    }
-
-    private func computePacingAdherence(entries: [LogEntry], waterEveryN: Int) -> Double {
-        var drinksSinceWater = 0
-        var waterDueCount = 0
-        var waterLoggedCount = 0
-
-        for entry in entries {
-            if entry.type == .alcohol {
-                drinksSinceWater += 1
-                if drinksSinceWater >= waterEveryN {
-                    waterDueCount += 1
-                    drinksSinceWater = 0
-                }
-            } else if entry.type == .water {
-                if waterDueCount > waterLoggedCount {
-                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
-                }
-                drinksSinceWater = 0
-            }
-        }
-
-        guard waterDueCount > 0 else { return 1.0 }
-        return Double(waterLoggedCount) / Double(waterDueCount)
     }
 
     // MARK: - Computation
