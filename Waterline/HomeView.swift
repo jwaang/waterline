@@ -18,6 +18,7 @@ struct HomeView: View {
     @Query private var presets: [DrinkPreset]
 
     let authManager: AuthenticationManager
+    let syncService: SyncService
 
     @State private var navigationPath = NavigationPath()
     @State private var now = Date()
@@ -38,6 +39,12 @@ struct HomeView: View {
             }
             .navigationTitle("Waterline")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    SyncStatusIndicator(
+                        status: syncService.status,
+                        pendingCount: syncService.pendingCount
+                    )
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         SettingsView(authManager: authManager)
@@ -227,6 +234,7 @@ struct HomeView: View {
         ReminderService.rescheduleInactivityCheck()
         checkPerDrinkReminder(for: session)
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
+        syncService.triggerSync()
     }
 
     // MARK: - Quick Add Buttons
@@ -264,6 +272,7 @@ struct HomeView: View {
                 ReminderService.rescheduleInactivityCheck()
                 checkPerDrinkReminder(for: session)
                 checkPacingWarning(for: session, addedEstimate: estimate)
+                syncService.triggerSync()
             }
         }
     }
@@ -282,6 +291,7 @@ struct HomeView: View {
 
         // Reset inactivity timer on activity
         ReminderService.rescheduleInactivityCheck()
+        syncService.triggerSync()
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -401,20 +411,10 @@ struct HomeView: View {
             ReminderService.scheduleTimeReminders(intervalMinutes: userSettings.timeReminderIntervalMinutes)
         }
 
-        // Background Convex sync — fire-and-forget
-        syncSessionToConvex(session)
+        // Background Convex sync
+        syncService.triggerSync()
 
         // Live Activity — handled in US-032
-    }
-
-    private func syncSessionToConvex(_ session: Session) {
-        // Convex sync requires user context; find user to get Convex userId
-        // For now, sync using the session data — ConvexService integration
-        // will be connected when ConvexService is injected via environment
-        Task.detached { @Sendable in
-            // Placeholder for Convex sync — will be wired when ConvexService
-            // is available in the environment (US-026 offline-first sync)
-        }
     }
 
     // MARK: - Navigation Routing
@@ -422,7 +422,7 @@ struct HomeView: View {
     @ViewBuilder
     private func sessionDestination(for sessionId: UUID) -> some View {
         if activeSessions.contains(where: { $0.id == sessionId }) {
-            ActiveSessionView(sessionId: sessionId)
+            ActiveSessionView(sessionId: sessionId, syncService: syncService)
         } else {
             SessionSummaryView(sessionId: sessionId)
         }
@@ -585,6 +585,10 @@ struct PastSessionRow: View {
 }
 
 #Preview {
-    HomeView(authManager: AuthenticationManager(store: InMemoryCredentialStore()))
-        .modelContainer(for: [User.self, Session.self, LogEntry.self, DrinkPreset.self], inMemory: true)
+    let container = try! ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    HomeView(
+        authManager: AuthenticationManager(store: InMemoryCredentialStore()),
+        syncService: SyncService(convexService: nil, modelContainer: container)
+    )
+    .modelContainer(container)
 }

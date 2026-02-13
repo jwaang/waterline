@@ -69,6 +69,17 @@ after each iteration and it's included in prompts for context.
 - `restoreSession()` called on app launch to hydrate from Keychain
 - Convex sync is fire-and-forget (non-fatal failure) — local SwiftData is authoritative
 
+### Offline-First Sync Pattern (SyncService.swift)
+- `SyncService` is `@Observable @MainActor` — exposes `status: SyncStatus` and `pendingCount: Int` for UI binding
+- All SwiftData models (`Session`, `LogEntry`, `DrinkPreset`) have `needsSync: Bool` field (default `true`) — marks items pending sync
+- `NWPathMonitor` on background queue detects connectivity; triggers sync on connectivity restoration
+- Sync engine creates a fresh `ModelContext` from `ModelContainer`, queries `needsSync == true`, pushes to Convex, then marks `needsSync = false` on success
+- Conflict resolution: last-write-wins via Convex `upsertSession`/`upsertDrinkPreset` with `existingId` parameter
+- `SyncStatusIndicator` view shows subtle cloud icon with four states: idle (checkmark), syncing (animated), offline (slash), error (exclamation)
+- `syncService.triggerSync()` called after every data mutation in views (log water, log drink, log preset, delete entry, start session)
+- `SyncService` threaded through view hierarchy: `WaterlineApp` → `RootView` → `HomeView` → `ActiveSessionView`
+- After `xcodegen generate`, new Swift files are auto-included from `path: Waterline` source glob
+
 ---
 
 ## Feb 12, 2026 - US-003
@@ -448,5 +459,34 @@ after each iteration and it's included in prompts for context.
   - Passing `AuthenticationManager` through the view hierarchy (RootView → HomeView → SettingsView) is necessary because auth state drives top-level navigation and can't be reconstructed from SwiftData alone — the Keychain credential store and auth state machine are app-level concerns
   - `UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")` must be called during account deletion to ensure the user goes through full onboarding again, not just the sign-in screen — `@AppStorage` reads from the same backing store
   - Delete account must delete child entities (presets, log entries) before parent entities (sessions, user) even though SwiftData `@Relationship(deleteRule: .cascade)` should handle it — explicit deletion is safer and avoids relying on cascade timing during batch deletes
+---
+
+## 2026-02-13 - US-026
+- What was implemented:
+  - `SyncService` (`@Observable @MainActor`) with `NWPathMonitor` for network connectivity detection, background sync queue that queries SwiftData for `needsSync == true` items, and pushes to Convex via `ConvexService`
+  - `SyncStatusIndicator` view — subtle cloud icon with four states: idle (checkmark.icloud), syncing (animated arrow.triangle.2.circlepath.icloud), offline (icloud.slash), error (exclamationmark.icloud) with pending count badge
+  - `SyncStatus` enum with `.idle`, `.syncing`, `.offline`, `.error(String)` cases
+  - `needsSync: Bool` field added to `Session`, `LogEntry`, and `DrinkPreset` SwiftData models (default `true`)
+  - `syncService.triggerSync()` wired into all data mutation points: log water, log drink (sheet), log preset, delete entries, start session
+  - Sync indicator added to `HomeView` toolbar (leading) and `ActiveSessionView` toolbar (trailing)
+  - `SyncService` threaded through view hierarchy: `WaterlineApp` → `RootView` → `HomeView` → `ActiveSessionView`
+  - Removed old placeholder `syncSessionToConvex()` fire-and-forget stub from `HomeView`
+  - Last-write-wins conflict resolution via Convex upsert mutations with `existingId`
+  - All previews updated for new `syncService` parameter
+- Files changed:
+  - `Waterline/SyncService.swift` (new) — offline-first sync engine with NWPathMonitor
+  - `Waterline/SyncStatusIndicator.swift` (new) — subtle cloud icon sync status view
+  - `Waterline/Models.swift` (modified — added `needsSync: Bool` to Session, LogEntry, DrinkPreset)
+  - `Waterline/WaterlineApp.swift` (modified — creates SyncService, passes to RootView, starts on appear)
+  - `Waterline/ContentView.swift` (modified — RootView accepts and passes syncService)
+  - `Waterline/HomeView.swift` (modified — accepts syncService, sync indicator in toolbar, triggerSync after mutations, removed old placeholder)
+  - `Waterline/ActiveSessionView.swift` (modified — accepts syncService, sync indicator in toolbar, triggerSync after mutations)
+- **Learnings:**
+  - `NWPathMonitor` must start on a non-main `DispatchQueue` — using `DispatchQueue(label: ...)` for the monitor queue, then dispatching UI state updates back to `@MainActor` via `Task { @MainActor in ... }`
+  - SwiftData `#Predicate` works well for filtering `needsSync == true` — the `$0.needsSync` syntax resolves to the stored Bool property
+  - Creating a fresh `ModelContext(modelContainer)` in the sync engine avoids conflicts with the view's `@Environment(\.modelContext)` — each context operates independently
+  - `@State private var syncService: SyncService` in `WaterlineApp` requires `_syncService = State(initialValue:)` initialization in `init()` since the property wrapper can't be assigned directly before `self` is available
+  - `symbolEffect(.pulse, isActive:)` provides a nice animated indicator for the syncing state on SF Symbols without needing a custom animation
+  - XcodeGen auto-includes new `.swift` files from the `path: Waterline` source glob, but `xcodegen generate` must be re-run for the Xcode project to pick them up
 ---
 

@@ -5,6 +5,7 @@ import UserNotifications
 @main
 struct WaterlineApp: App {
     @State private var authManager = AuthenticationManager()
+    @State private var syncService: SyncService
     private let notificationDelegate = NotificationDelegate()
     private let sharedModelContainer: ModelContainer
 
@@ -18,6 +19,9 @@ struct WaterlineApp: App {
         }
         self.sharedModelContainer = container
 
+        // Create sync service (ConvexService is nil until deployment URL is configured)
+        _syncService = State(initialValue: SyncService(convexService: nil, modelContainer: container))
+
         // Register notification categories (time reminders, per-drink reminders)
         ReminderService.registerCategory()
 
@@ -29,9 +33,10 @@ struct WaterlineApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView(authManager: authManager)
+            RootView(authManager: authManager, syncService: syncService)
                 .onAppear {
                     authManager.restoreSession()
+                    syncService.start()
                 }
         }
         .modelContainer(sharedModelContainer)

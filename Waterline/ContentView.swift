@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 
 struct RootView: View {
     let authManager: AuthenticationManager
+    let syncService: SyncService
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
@@ -17,7 +19,7 @@ struct RootView: View {
                 }
             case .signedIn:
                 if hasCompletedOnboarding {
-                    HomeView(authManager: authManager)
+                    HomeView(authManager: authManager, syncService: syncService)
                 } else {
                     ConfigureDefaultsView(authManager: authManager) {
                         hasCompletedOnboarding = true
@@ -33,5 +35,7 @@ struct RootView: View {
 #Preview {
     let store = InMemoryCredentialStore()
     let manager = AuthenticationManager(store: store)
-    RootView(authManager: manager)
+    let container = try! ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let sync = SyncService(convexService: nil, modelContainer: container)
+    RootView(authManager: manager, syncService: sync)
 }

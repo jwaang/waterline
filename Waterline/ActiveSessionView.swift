@@ -5,6 +5,7 @@ import UserNotifications
 
 struct ActiveSessionView: View {
     let sessionId: UUID
+    let syncService: SyncService
 
     @Query private var sessions: [Session]
     @Query private var users: [User]
@@ -19,8 +20,9 @@ struct ActiveSessionView: View {
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
     private var warningThreshold: Int { userSettings.warningThreshold }
 
-    init(sessionId: UUID) {
+    init(sessionId: UUID, syncService: SyncService) {
         self.sessionId = sessionId
+        self.syncService = syncService
         _sessions = Query(filter: #Predicate<Session> { $0.id == sessionId })
     }
 
@@ -34,6 +36,14 @@ struct ActiveSessionView: View {
         }
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                SyncStatusIndicator(
+                    status: syncService.status,
+                    pendingCount: syncService.pendingCount
+                )
+            }
+        }
         .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
             now = time
         }
@@ -191,6 +201,7 @@ struct ActiveSessionView: View {
             modelContext.delete(entry)
         }
         try? modelContext.save()
+        syncService.triggerSync()
     }
 
     // MARK: - Waterline Computation
@@ -271,6 +282,7 @@ struct ActiveSessionView: View {
         ReminderService.rescheduleInactivityCheck()
         checkPerDrinkReminder(for: session)
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
+        syncService.triggerSync()
     }
 
     // MARK: - Quick Add Buttons
@@ -308,6 +320,7 @@ struct ActiveSessionView: View {
                 ReminderService.rescheduleInactivityCheck()
                 checkPerDrinkReminder(for: session)
                 checkPacingWarning(for: session, addedEstimate: estimate)
+                syncService.triggerSync()
             }
         }
     }
@@ -326,6 +339,7 @@ struct ActiveSessionView: View {
 
         // Reset inactivity timer on activity
         ReminderService.rescheduleInactivityCheck()
+        syncService.triggerSync()
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -369,8 +383,12 @@ struct ActiveSessionView: View {
 }
 
 #Preview {
+    let container = try! ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     NavigationStack {
-        ActiveSessionView(sessionId: UUID())
-            .modelContainer(for: [User.self, Session.self, LogEntry.self, DrinkPreset.self], inMemory: true)
+        ActiveSessionView(
+            sessionId: UUID(),
+            syncService: SyncService(convexService: nil, modelContainer: container)
+        )
+        .modelContainer(container)
     }
 }
