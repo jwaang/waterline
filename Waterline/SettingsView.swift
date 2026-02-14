@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
@@ -10,6 +11,7 @@ struct SettingsView: View {
 
     @State private var showDeleteConfirmation = false
     @State private var showSignOutConfirmation = false
+    @State private var notificationsAuthorized = true
 
     private var user: User? { users.first }
     private var settings: UserSettings { user?.settings ?? UserSettings() }
@@ -26,12 +28,38 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            checkNotificationStatus()
+        }
+    }
+
+    private func checkNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let isAuthorized = settings.authorizationStatus == .authorized
+            DispatchQueue.main.async {
+                notificationsAuthorized = isAuthorized
+            }
+        }
     }
 
     // MARK: - Reminders
 
     private var remindersSection: some View {
         Section {
+            if !notificationsAuthorized {
+                HStack {
+                    Label("Notifications disabled", systemImage: "bell.slash")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        Button("Settings") {
+                            UIApplication.shared.open(settingsURL)
+                        }
+                        .font(.subheadline)
+                    }
+                }
+            }
+
             Toggle("Time-based reminders", isOn: Binding(
                 get: { settings.timeRemindersEnabled },
                 set: { newValue in

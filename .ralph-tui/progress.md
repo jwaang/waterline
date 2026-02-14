@@ -131,3 +131,14 @@ after each iteration and it's included in prompts for context.
   - The pacing adherence computation in EndSessionIntent mirrors the logic in ActiveSessionView.endSession() and WaterlineApp.handleWatchEndSession() — this is duplicated in 3 places now. When WaterlineEngine (US-034) lands, all three should be consolidated.
   - New intent files must be added to both the WaterlineIntents source path (automatic via directory inclusion) AND explicitly to WaterlineWidgets sources in project.yml for Live Activity button support.
 ---
+
+## Feb 13, 2026 - US-035
+- Notification permission request screen now always shows after configure-defaults (previously only shown when time reminders were enabled)
+- Updated explanation text to match AC: "Waterline sends gentle reminders to drink water during your session. Allow notifications to get pacing nudges."
+- Added notification denied status to SettingsView reminders section: "Notifications disabled" label with "Settings" button that opens system Settings via `UIApplication.openSettingsURLString`
+- `NotificationPermissionView` already existed with "Enable Notifications" and "Skip" buttons — no changes needed there
+- Files changed: `Waterline/ConfigureDefaultsView.swift`, `Waterline/SettingsView.swift`
+- **Learnings:**
+  - Swift 6 strict concurrency: `UNNotificationSettings` from `getNotificationSettings` callback is not `Sendable`. Must extract the `Bool` value before crossing to `DispatchQueue.main.async` — same pattern as WatchConnectivity `[String: Any]` dicts.
+  - The `NotificationPermissionView` was already well-structured as a reusable sheet component with both enable and skip paths — just needed the parent to always present it.
+---
