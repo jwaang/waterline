@@ -11,6 +11,7 @@ final class WatchConnectivityManager: NSObject, @unchecked Sendable {
     var onWatchLogWater: (() -> Void)?
     var onWatchLogDrink: ((_ presetName: String, _ drinkType: String, _ sizeOz: Double, _ standardDrinkEstimate: Double) -> Void)?
     var onWatchStartSession: (() -> Void)?
+    var onWatchEndSession: (() -> Void)?
 
     private var wcSession: WCSession?
 
@@ -133,6 +134,10 @@ extension WatchConnectivityManager: WCSessionDelegate {
         case "startSession":
             Task { @MainActor in
                 self.onWatchStartSession?()
+            }
+        case "endSession":
+            Task { @MainActor in
+                self.onWatchEndSession?()
             }
         default:
             break

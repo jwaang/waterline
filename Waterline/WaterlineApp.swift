@@ -51,6 +51,9 @@ struct WaterlineApp: App {
         watchManager.onWatchStartSession = {
             WaterlineApp.handleWatchStartSession(container: containerRef, watchManager: watchManager)
         }
+        watchManager.onWatchEndSession = {
+            WaterlineApp.handleWatchEndSession(container: containerRef, watchManager: watchManager)
+        }
     }
 
     var body: some Scene {
@@ -184,6 +187,86 @@ struct WaterlineApp: App {
         }
 
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        sendWatchUpdate(container: container, watchManager: watchManager)
+    }
+
+    /// Handles "end session" command received from Apple Watch.
+    @MainActor
+    private static func handleWatchEndSession(container: ModelContainer, watchManager: WatchConnectivityManager) {
+        let context = container.mainContext
+
+        let descriptor = FetchDescriptor<Session>(
+            predicate: #Predicate { $0.isActive }
+        )
+        guard let session = try? context.fetch(descriptor).first else {
+            // No active session — just update watch state
+            sendWatchUpdate(container: container, watchManager: watchManager)
+            return
+        }
+
+        // End the session
+        session.endTime = Date()
+        session.isActive = false
+
+        // Compute summary
+        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
+        let totalDrinks = entries.filter { $0.type == .alcohol }.count
+        let totalWater = entries.filter { $0.type == .water }.count
+        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
+        let duration = (session.endTime ?? Date()).timeIntervalSince(session.startTime)
+
+        let userDescriptor = FetchDescriptor<User>()
+        let waterEveryN = (try? context.fetch(userDescriptor).first)?.settings.waterEveryNDrinks ?? 1
+
+        // Pacing adherence
+        var drinksSinceWater = 0
+        var waterDueCount = 0
+        var waterLoggedCount = 0
+        for entry in entries {
+            if entry.type == .alcohol {
+                drinksSinceWater += 1
+                if drinksSinceWater >= waterEveryN {
+                    waterDueCount += 1
+                    drinksSinceWater = 0
+                }
+            } else if entry.type == .water {
+                if waterDueCount > waterLoggedCount {
+                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
+                }
+                drinksSinceWater = 0
+            }
+        }
+        let adherence = waterDueCount > 0 ? Double(waterLoggedCount) / Double(waterDueCount) : 1.0
+
+        var wlValue: Double = 0
+        for entry in entries {
+            if entry.type == .alcohol, let meta = entry.alcoholMeta {
+                wlValue += meta.standardDrinkEstimate
+            } else if entry.type == .water {
+                wlValue -= 1
+            }
+        }
+
+        session.computedSummary = SessionSummary(
+            totalDrinks: totalDrinks,
+            totalWater: totalWater,
+            totalStandardDrinks: totalStdDrinks,
+            durationSeconds: duration,
+            pacingAdherence: adherence,
+            finalWaterlineValue: wlValue
+        )
+
+        // Cancel reminders
+        ReminderService.cancelAllTimeReminders()
+
+        // Mark for sync and save
+        session.needsSync = true
+        try? context.save()
+
+        // Reload widgets
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+
+        // Send updated state to watch (isActive will now be false)
         sendWatchUpdate(container: container, watchManager: watchManager)
     }
 

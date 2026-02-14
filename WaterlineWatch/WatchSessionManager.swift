@@ -72,6 +72,17 @@ final class WatchSessionManager: NSObject, ObservableObject, @unchecked Sendable
         WKInterfaceDevice.current().play(.click)
     }
 
+    /// Sends an "end session" command to the phone with haptic confirmation.
+    func sendEndSessionCommand() {
+        guard let session = wcSession, session.isReachable else { return }
+        let message: [String: Any] = [
+            "type": "endSession",
+            "timestamp": Date().timeIntervalSince1970,
+        ]
+        session.sendMessage(message, replyHandler: nil)
+        WKInterfaceDevice.current().play(.success)
+    }
+
     /// Sends a "start session" command to the phone with haptic confirmation.
     func sendStartSessionCommand() {
         guard let session = wcSession, session.isReachable else { return }

@@ -54,6 +54,18 @@ after each iteration and it's included in prompts for context.
   - The sync architecture is well-designed: `SyncService` handles sessions first (dependency ordering), then log entries, then presets, with per-item error tolerance and retry on next cycle
 ---
 
+## Feb 13, 2026 - US-029
+- Implemented "End Session" from Apple Watch with full WatchConnectivity round-trip
+- Watch UI: "End Session" button (scroll down below quick-add buttons) with `.confirmationDialog` prompt
+- Watch sends `endSession` message to phone via `sendMessage`; phone handles it in `WaterlineApp.handleWatchEndSession`
+- Phone-side handler: ends session (sets `endTime`, `isActive = false`), computes full `SessionSummary` (drinks, water, std drinks, duration, pacing adherence, final waterline value), cancels reminders, marks for sync, reloads widgets, and sends updated state back to watch
+- Watch receives updated `isActive: false` via `sendWatchUpdate` → transitions to "no active session" state automatically
+- Files changed: `WaterlineWatch/WatchContentView.swift`, `WaterlineWatch/WatchSessionManager.swift`, `Waterline/WatchConnectivityManager.swift`, `Waterline/WaterlineApp.swift`
+- **Learnings:**
+  - The end-session logic (summary computation, reminder cancellation, sync marking) is duplicated between `ActiveSessionView.endSession()` and `WaterlineApp.handleWatchEndSession()`. Once WaterlineEngine lands (US-034), this should be consolidated into a shared service method.
+  - Watch state transitions are automatic — once `isActive: false` is sent via `updateApplicationContext`, the watch's `@Published isSessionActive` flips and SwiftUI re-renders to the no-session view without explicit navigation.
+---
+
 ## Feb 13, 2026 - US-027
 - Implemented Apple Watch main screen with full quick-logging capability
 - Watch active session view: compact Waterline gauge + drink/water counts + "+ Drink" and "+ Water" buttons

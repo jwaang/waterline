@@ -3,6 +3,7 @@ import SwiftUI
 struct WatchContentView: View {
     @ObservedObject var sessionManager: WatchSessionManager
     @State private var showingDrinkPicker = false
+    @State private var showingEndConfirmation = false
 
     var body: some View {
         ZStack {
@@ -54,7 +55,25 @@ struct WatchContentView: View {
 
                 // Quick-add buttons
                 quickAddButtons
+
+                Divider()
+
+                // End session
+                Button(role: .destructive) {
+                    showingEndConfirmation = true
+                } label: {
+                    Label("End Session", systemImage: "stop.fill")
+                        .font(.footnote)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
             }
+        }
+        .confirmationDialog("End this session?", isPresented: $showingEndConfirmation, titleVisibility: .visible) {
+            Button("End Session", role: .destructive) {
+                sessionManager.sendEndSessionCommand()
+            }
+            Button("Cancel", role: .cancel) {}
         }
         .sheet(isPresented: $showingDrinkPicker) {
             drinkPresetPicker
