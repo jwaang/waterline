@@ -74,6 +74,16 @@ final class SyncService {
 
     // MARK: - Public
 
+    /// Deletes the user's data from Convex. Best-effort; local deletion proceeds regardless.
+    func deleteRemoteAccount(appleUserId: String) async {
+        guard let convexService, isConnected else { return }
+        do {
+            try await convexService.deleteUser(appleUserId: appleUserId)
+        } catch {
+            // Remote deletion failure is non-fatal — local data is already wiped
+        }
+    }
+
     /// Call after any local data change to trigger a sync attempt.
     func triggerSync() {
         guard convexService != nil else { return }

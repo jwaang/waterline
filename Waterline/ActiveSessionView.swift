@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import SwiftData
 import Combine
@@ -16,6 +17,7 @@ struct ActiveSessionView: View {
     @State private var now = Date()
     @State private var showingDrinkSheet = false
     @State private var showingEndConfirmation = false
+    @State private var showingSummary = false
     @State private var entryToEdit: LogEntry?
 
     private var session: Session? { sessions.first }
@@ -81,6 +83,9 @@ struct ActiveSessionView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .navigationDestination(isPresented: $showingSummary) {
+            SessionSummaryView(sessionId: sessionId)
+        }
     }
 
     // MARK: - End Session
@@ -110,82 +115,49 @@ struct ActiveSessionView: View {
         // Cancel all active reminders
         ReminderService.cancelAllTimeReminders()
 
-        // End Live Activity — handled in US-032
+        // End Live Activity
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.endActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
 
-        // Sync to Convex — fire-and-forget
-        Task.detached { @Sendable in
-            // Placeholder for Convex sync — will be wired in US-026
-        }
-
+        // Mark for sync and persist
+        session.needsSync = true
         try? modelContext.save()
+
+        // Sync to Convex
+        syncService.triggerSync()
+
+        // Reload widgets
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+
+        // Navigate to summary
+        showingSummary = true
     }
 
     private func computeSummary(for session: Session) {
-        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-
-        let totalDrinks = entries.filter { $0.type == .alcohol }.count
-        let totalWater = entries.filter { $0.type == .water }.count
-        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
-
-        let duration: TimeInterval
-        if let endTime = session.endTime {
-            duration = endTime.timeIntervalSince(session.startTime)
-        } else {
-            duration = Date().timeIntervalSince(session.startTime)
-        }
-
-        // Pacing adherence: % of times water was logged within the N-drink rule
-        // Walk through entries in order, tracking "opportunities" where water was due
-        // and how many times the user actually logged water before exceeding the threshold
-        let waterEveryN = userSettings.waterEveryNDrinks
-        let adherence = computePacingAdherence(entries: entries, waterEveryN: waterEveryN)
-
-        var wlValue: Double = 0
-        for entry in entries {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                wlValue += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                wlValue -= 1
-            }
-        }
-
-        session.computedSummary = SessionSummary(
-            totalDrinks: totalDrinks,
-            totalWater: totalWater,
-            totalStandardDrinks: totalStdDrinks,
-            durationSeconds: duration,
-            pacingAdherence: adherence,
-            finalWaterlineValue: wlValue
+        session.computedSummary = WaterlineEngine.computeSummary(
+            from: session.logEntries,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            waterEveryN: userSettings.waterEveryNDrinks,
+            warningThreshold: warningThreshold
         )
     }
 
-    /// Computes pacing adherence as the percentage of N-drink intervals where the user
-    /// logged water before exceeding the threshold.
-    /// For each group of N consecutive alcoholic drinks, if water was logged before the
-    /// next drink group started, that counts as adherent. Returns 1.0 if no drinks or no
-    /// expected water breaks.
-    private func computePacingAdherence(entries: [LogEntry], waterEveryN: Int) -> Double {
-        var drinksSinceWater = 0
-        var waterDueCount = 0
-        var waterLoggedCount = 0
+    // MARK: - Live Activity
 
-        for entry in entries {
-            if entry.type == .alcohol {
-                drinksSinceWater += 1
-                if drinksSinceWater >= waterEveryN {
-                    waterDueCount += 1
-                    drinksSinceWater = 0
-                }
-            } else if entry.type == .water {
-                if waterDueCount > waterLoggedCount {
-                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
-                }
-                drinksSinceWater = 0
-            }
-        }
-
-        guard waterDueCount > 0 else { return 1.0 }
-        return Double(waterLoggedCount) / Double(waterDueCount)
+    private func updateLiveActivity(for session: Session) {
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.updateActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
     }
 
     // MARK: - Counts
@@ -254,15 +226,7 @@ struct ActiveSessionView: View {
     // MARK: - Pacing Computation
 
     private func alcoholCountSinceLastWater(for session: Session) -> Int {
-        var count = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol {
-                count += 1
-            } else if entry.type == .water {
-                count = 0
-            }
-        }
-        return count
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold).alcoholCountSinceLastWater
     }
 
     private func nextReminderCountdown(for session: Session) -> String {
@@ -320,28 +284,25 @@ struct ActiveSessionView: View {
         try? modelContext.save()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Waterline Computation
 
+    private func waterlineState(for session: Session) -> WaterlineEngine.WaterlineState {
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)
+    }
+
     private func waterlineValue(for session: Session) -> Double {
-        var value: Double = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                value += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                value -= 1
-            }
-        }
-        return value
+        waterlineState(for: session).waterlineValue
     }
 
     private func drinkCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .alcohol }.count
+        waterlineState(for: session).totalAlcoholCount
     }
 
     private func waterCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .water }.count
+        waterlineState(for: session).totalWaterCount
     }
 
     // MARK: - Preset Chips
@@ -402,6 +363,7 @@ struct ActiveSessionView: View {
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Quick Add Buttons
@@ -441,6 +403,7 @@ struct ActiveSessionView: View {
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
                 WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+                updateLiveActivity(for: session)
             }
         }
     }
@@ -461,6 +424,7 @@ struct ActiveSessionView: View {
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Per-Drink Water Reminder

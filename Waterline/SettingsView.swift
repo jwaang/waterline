@@ -1,14 +1,17 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var users: [User]
 
     let authManager: AuthenticationManager
+    let syncService: SyncService
 
     @State private var showDeleteConfirmation = false
     @State private var showSignOutConfirmation = false
+    @State private var notificationsAuthorized = true
 
     private var user: User? { users.first }
     private var settings: UserSettings { user?.settings ?? UserSettings() }
@@ -25,12 +28,38 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            checkNotificationStatus()
+        }
+    }
+
+    private func checkNotificationStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let isAuthorized = settings.authorizationStatus == .authorized
+            DispatchQueue.main.async {
+                notificationsAuthorized = isAuthorized
+            }
+        }
     }
 
     // MARK: - Reminders
 
     private var remindersSection: some View {
         Section {
+            if !notificationsAuthorized {
+                HStack {
+                    Label("Notifications disabled", systemImage: "bell.slash")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                        Button("Settings") {
+                            UIApplication.shared.open(settingsURL)
+                        }
+                        .font(.subheadline)
+                    }
+                }
+            }
+
             Toggle("Time-based reminders", isOn: Binding(
                 get: { settings.timeRemindersEnabled },
                 set: { newValue in
@@ -194,9 +223,13 @@ struct SettingsView: View {
 
     private func save() {
         try? modelContext.save()
+        syncService.triggerSync()
     }
 
     private func deleteAccount() {
+        // Capture apple user ID before deleting local data
+        let appleUserId = user?.appleUserId
+
         let presetDescriptor = FetchDescriptor<DrinkPreset>()
         if let presets = try? modelContext.fetch(presetDescriptor) {
             for preset in presets { modelContext.delete(preset) }
@@ -221,6 +254,13 @@ struct SettingsView: View {
 
         ReminderService.cancelAllTimeReminders()
 
+        // Delete from Convex (best-effort, non-blocking)
+        if let appleUserId {
+            Task {
+                await syncService.deleteRemoteAccount(appleUserId: appleUserId)
+            }
+        }
+
         UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
 
         authManager.signOut()
@@ -228,8 +268,12 @@ struct SettingsView: View {
 }
 
 #Preview {
+    let container = try! ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     NavigationStack {
-        SettingsView(authManager: AuthenticationManager(store: InMemoryCredentialStore()))
-            .modelContainer(for: [User.self, Session.self, LogEntry.self, DrinkPreset.self], inMemory: true)
+        SettingsView(
+            authManager: AuthenticationManager(store: InMemoryCredentialStore()),
+            syncService: SyncService(convexService: nil, modelContainer: container)
+        )
+        .modelContainer(container)
     }
 }

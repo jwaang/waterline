@@ -162,12 +162,7 @@ struct ConfigureDefaultsView: View {
 
     private func saveAndComplete() {
         saveSettings()
-
-        if timeRemindersEnabled {
-            showNotificationExplanation = true
-        } else {
-            completeOnboarding()
-        }
+        showNotificationExplanation = true
     }
 
     private func saveSettings() {
@@ -243,7 +238,7 @@ struct NotificationPermissionView: View {
                 Text("Stay on Track")
                     .font(.title3.bold())
 
-                Text("Waterline sends gentle reminders to drink water during your session.")
+                Text("Waterline sends gentle reminders to drink water during your session. Allow notifications to get pacing nudges.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

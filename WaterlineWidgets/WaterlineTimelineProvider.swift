@@ -132,22 +132,13 @@ struct WaterlineTimelineProvider: TimelineProvider {
                 let logDescriptor = FetchDescriptor<LogEntry>()
                 let allLogs = (try? context.fetch(logDescriptor)) ?? []
                 let sessionLogs = allLogs.filter { $0.session?.id == last.id }
-                var dc = 0, wc = 0, wl: Double = 0
-                for entry in sessionLogs.sorted(by: { $0.timestamp < $1.timestamp }) {
-                    if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                        wl += meta.standardDrinkEstimate
-                        dc += 1
-                    } else if entry.type == .water {
-                        wl -= 1
-                        wc += 1
-                    }
-                }
+                let state = WaterlineEngine.computeState(from: sessionLogs)
                 lastSessionSnapshot = LastSessionSnapshot(
                     date: last.startTime,
                     duration: duration,
-                    drinkCount: dc,
-                    waterCount: wc,
-                    finalWaterline: wl
+                    drinkCount: state.totalAlcoholCount,
+                    waterCount: state.totalWaterCount,
+                    finalWaterline: state.waterlineValue
                 )
             }
         }
@@ -172,18 +163,10 @@ struct WaterlineTimelineProvider: TimelineProvider {
         let sessionLogs = allLogs.filter { $0.session?.id == session.id }
         let sortedLogs = sessionLogs.sorted(by: { $0.timestamp < $1.timestamp })
 
-        var waterlineValue: Double = 0
-        var drinkCount = 0
-        var waterCount = 0
-        for entry in sortedLogs {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                waterlineValue += meta.standardDrinkEstimate
-                drinkCount += 1
-            } else if entry.type == .water {
-                waterlineValue -= 1
-                waterCount += 1
-            }
-        }
+        let engineState = WaterlineEngine.computeState(from: sortedLogs, warningThreshold: settings.warningThreshold)
+        let waterlineValue = engineState.waterlineValue
+        let drinkCount = engineState.totalAlcoholCount
+        let waterCount = engineState.totalWaterCount
 
         // Next reminder countdown
         var nextReminderText: String?

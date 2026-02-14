@@ -5,7 +5,140 @@ after each iteration and it's included in prompts for context.
 
 ## Codebase Patterns (Study These First)
 
-*Add reusable patterns discovered during development here.*
+- **SessionSummaryView** is used for both post-session and past session review. It takes `sessionId: UUID` and `allowsEditing: Bool` (default `true`). HomeView passes `allowsEditing: false` for past sessions to enforce read-only mode.
+- **Duplicate declarations** have been a recurring issue in this codebase — always check for duplicated `@Query`, `@Environment`, computed properties, and methods before building.
+- **Recompute pattern**: When editing/deleting log entries in summary, recompute the `SessionSummary` by replaying all remaining entries in timestamp order, then save to `session.computedSummary`.
+- **Navigation routing**: HomeView uses `navigationDestination(for: UUID.self)` to route to either `ActiveSessionView` (if session is active) or `SessionSummaryView` (if ended).
+- **SettingsView** requires both `authManager` and `syncService` parameters. Settings changes save to SwiftData immediately and trigger Convex sync via `syncService.triggerSync()`.
+- **Sync architecture**: Offline-first with `needsSync` flags on all models. SyncService uses NWPathMonitor for connectivity, auto-syncs on reconnection. All writes go to SwiftData first, then `triggerSync()`. When modifying already-synced records (e.g., ending a session), must re-set `needsSync = true` before saving.
+- **WatchConnectivity protocol**: Phone→watch uses `updateApplicationContext` (session state) and `sendMessage`/`transferUserInfo` (presets, reminders). Watch→phone uses `sendMessage` for commands (logWater, logDrink, startSession). Watch has no SwiftData — receives precomputed state and lightweight preset dicts. All watch commands are handled in `WaterlineApp` static methods which create SwiftData entries and call `sendWatchUpdate()` to push refreshed state back.
+- **Swift 6 concurrency + WCSessionDelegate**: `[String: Any]` dicts from WCSession delegate methods are not `Sendable`. Bridge via `JSONSerialization.data`→`Data` (Sendable)→decode on MainActor. Don't use `as! Sendable` or `as Sendable` casts.
+- **Live Activity pattern**: `LiveActivityManager` (static enum) handles start/update/end. `SessionActivityAttributes.swift` is shared across main app + widget extension + intents extension via XcodeGen shared source paths. Every log action (phone, watch, widget, Live Activity) must call `LiveActivityManager.updateActivity(...)` after persisting. App Intents update Live Activities directly via `Activity<SessionActivityAttributes>.activities`.
 
 ---
 
+## Feb 13, 2026 - US-022
+- SessionSummaryView already existed with full feature set; fixed compilation-blocking duplicate declarations
+- Removed: duplicate `@Query private var users`, duplicate `@Environment(\.dismiss)`, duplicate `.toolbar`, duplicate `userSettings` computed property, unused `computePacingAdherence(entries:waterEveryN:)` overload
+- Files changed: `Waterline/SessionSummaryView.swift`
+- **Learnings:**
+  - This file had accumulated duplicates from multiple prior editing passes (likely merge artifacts or copy-paste from parallel workers)
+  - The view properly handles all AC: overview stats (drinks, std drinks, water count+volume, duration, pacing adherence %), timeline with edit/delete + recompute, final waterline value, Done button with dismiss
+  - SourceKit diagnostics ("Cannot find type in scope") are noise when editing a single file — they resolve on full build
+---
+
+## Feb 13, 2026 - US-024
+- SettingsView already existed with all 5 required sections (Reminders, Waterline, Defaults, Presets, Account). Two gaps fixed:
+  1. Added `syncService` parameter and `syncService.triggerSync()` call in `save()` so settings changes sync to Convex
+  2. Added Convex account deletion (`syncService.deleteRemoteAccount`) in `deleteAccount()` before local signout
+- Added `deleteRemoteAccount(appleUserId:)` method to SyncService
+- Updated HomeView call site to pass `syncService` to SettingsView
+- Updated SettingsView #Preview to include syncService
+- Files changed: `Waterline/SettingsView.swift`, `Waterline/HomeView.swift`, `Waterline/SyncService.swift`
+- **Learnings:**
+  - SettingsView was already feature-complete for local-only operation; the missing piece was Convex sync integration
+  - SyncService's `convexService` is private, so remote deletion needed a new public method on SyncService rather than exposing ConvexService directly
+  - ConvexService is currently nil (not yet configured with deployment URL), so sync calls are effectively no-ops but correctly structured for when it's wired up
+---
+
+## Feb 13, 2026 - US-026
+- Offline-first sync was already fully implemented across the codebase. One gap fixed:
+  - `ActiveSessionView.endSession()` had a placeholder `Task.detached` block instead of calling `syncService.triggerSync()`. Replaced with proper sync trigger and added `session.needsSync = true` to ensure ended sessions re-sync.
+- Verified all 4 acceptance criteria already met:
+  1. All log entries write to SwiftData first (every `logWater`, `logPreset`, `LogDrinkView` flow)
+  2. Background sync queue with NWPathMonitor, `needsSync` flags, auto-sync on reconnection
+  3. Last-write-wins conflict resolution via timestamp-based upserts
+  4. SyncStatusIndicator in toolbar of both HomeView and ActiveSessionView (cloud icons with states)
+- Files changed: `Waterline/ActiveSessionView.swift`
+- **Learnings:**
+  - When modifying an already-synced record (e.g., setting `session.isActive = false`), you must explicitly set `needsSync = true` again — SwiftData property changes don't auto-reset custom sync flags
+  - The sync architecture is well-designed: `SyncService` handles sessions first (dependency ordering), then log entries, then presets, with per-item error tolerance and retry on next cycle
+---
+
+## Feb 13, 2026 - US-029
+- Implemented "End Session" from Apple Watch with full WatchConnectivity round-trip
+- Watch UI: "End Session" button (scroll down below quick-add buttons) with `.confirmationDialog` prompt
+- Watch sends `endSession` message to phone via `sendMessage`; phone handles it in `WaterlineApp.handleWatchEndSession`
+- Phone-side handler: ends session (sets `endTime`, `isActive = false`), computes full `SessionSummary` (drinks, water, std drinks, duration, pacing adherence, final waterline value), cancels reminders, marks for sync, reloads widgets, and sends updated state back to watch
+- Watch receives updated `isActive: false` via `sendWatchUpdate` → transitions to "no active session" state automatically
+- Files changed: `WaterlineWatch/WatchContentView.swift`, `WaterlineWatch/WatchSessionManager.swift`, `Waterline/WatchConnectivityManager.swift`, `Waterline/WaterlineApp.swift`
+- **Learnings:**
+  - The end-session logic (summary computation, reminder cancellation, sync marking) is duplicated between `ActiveSessionView.endSession()` and `WaterlineApp.handleWatchEndSession()`. Once WaterlineEngine lands (US-034), this should be consolidated into a shared service method.
+  - Watch state transitions are automatic — once `isActive: false` is sent via `updateApplicationContext`, the watch's `@Published isSessionActive` flips and SwiftUI re-renders to the no-session view without explicit navigation.
+---
+
+## Feb 13, 2026 - US-027
+- Implemented Apple Watch main screen with full quick-logging capability
+- Watch active session view: compact Waterline gauge + drink/water counts + "+ Drink" and "+ Water" buttons
+- "+ Water" immediately sends `logWater` command to phone via WatchConnectivity
+- "+ Drink" opens preset picker sheet (shows user presets from phone, or fallback defaults: Beer, Wine, Shot, Cocktail, Double)
+- No active session state: shows "Start Session" button that creates a session on the phone
+- Haptic confirmation: `.click` on log actions, `.success` on session start, `.notification` on water reminders
+- Phone sends session state via `updateApplicationContext` and presets via `sendMessage`/`transferUserInfo` after every watch command
+- New `handleWatchLogDrink` handler creates alcohol LogEntry with preset metadata, checks per-drink + pacing warnings
+- New `handleWatchStartSession` handler creates Session, schedules reminders, associates with user
+- Files changed: `WaterlineWatch/WatchContentView.swift`, `WaterlineWatch/WatchSessionManager.swift`, `Waterline/WatchConnectivityManager.swift`, `Waterline/WaterlineApp.swift`
+- **Learnings:**
+  - WatchConnectivity `[String: Any]` dicts are not `Sendable` in Swift 6 strict concurrency. Cannot cast `Any` to `Sendable`. Solution: serialize to `Data` via `JSONSerialization` (which is `Sendable`) then deserialize on the MainActor side.
+  - `sendSessionState` was defined but never called — the watch was a display-only shell. Watch state updates must be explicitly pushed after every data mutation (both watch-originated and phone-originated commands).
+  - Watch app doesn't share SwiftData models — it uses lightweight `WatchPreset` structs deserialized from dictionaries. Keep watch-side data structures minimal and independent.
+  - Default drink presets are hardcoded as fallback in WatchContentView for when phone hasn't synced presets yet (e.g., first launch or watch not reachable).
+---
+
+## Feb 13, 2026 - US-032
+- Implemented Live Activity / Dynamic Island for active drinking sessions
+- Live Activity starts when session starts (from phone, watch, or widget)
+- Displays: Waterline value, drink/water counts, session duration timer, quick-action buttons
+- Dynamic Island compact: drop icon + waterline value; expanded: full counts + quick-add buttons
+- Lock Screen view: waterline value, counts, duration, "+ Drink" and "+ Water" buttons via App Intents
+- Updates in near-real-time: every log action (drink, water, preset, delete) pushes new state to Live Activity
+- Live Activity ends when session ends (from phone, watch, or abandoned session handler)
+- App Intents (LogDrinkIntent, LogWaterIntent) also update Live Activity after logging
+- Files changed:
+  - `Waterline/SessionActivityAttributes.swift` (new) — ActivityKit attributes + content state
+  - `Waterline/LiveActivityManager.swift` (new) — start/update/end Live Activity lifecycle
+  - `WaterlineWidgets/SessionLiveActivity.swift` (new) — Live Activity UI (lock screen + Dynamic Island)
+  - `WaterlineWidgets/WaterlineWidgets.swift` — added SessionLiveActivity to widget bundle
+  - `Waterline/HomeView.swift` — start Live Activity on session start, update on log actions
+  - `Waterline/ActiveSessionView.swift` — update on log/delete, end on session end
+  - `Waterline/WaterlineApp.swift` — update/start/end for watch-originated commands
+  - `WaterlineIntents/LogDrinkIntent.swift` — recompute + update Live Activity after logging
+  - `WaterlineIntents/LogWaterIntent.swift` — recompute + update Live Activity after logging
+  - `project.yml` — NSSupportsLiveActivities, shared SessionActivityAttributes source across targets
+- **Learnings:**
+  - `SessionActivityAttributes` must be compiled into both the main app target AND the widget extension target. Use XcodeGen shared source paths to include it in both without duplicating the file.
+  - Live Activity UI goes in the widget bundle (WidgetBundle), not the main app — add it alongside existing widgets with `SessionLiveActivity()` in the bundle body.
+  - `NSSupportsLiveActivities: true` must be in both the main app Info.plist (via `INFOPLIST_KEY_NSSupportsLiveActivities`) and the widget extension's Info.plist properties.
+  - App Intents in the extension process can update Live Activities directly via `Activity<T>.activities` — no need for IPC back to the main app.
+  - The `LiveActivityManager` pattern (static enum with start/update/end) keeps Live Activity logic decoupled from views and testable.
+---
+
+## Feb 13, 2026 - US-033
+- Implemented all four App Intents for interactive widgets, Live Activity, and Siri
+- `LogDrinkIntent`: Updated with optional `presetId` String parameter — resolves DrinkPreset from SwiftData to use its drinkType/sizeOz/standardDrinkEstimate; defaults to standard beer (1.0 std) if no preset provided
+- `LogWaterIntent`: Already existed and complete — logs water with user's default amount
+- `StartSessionIntent`: Created new — creates Session in SwiftData, associates with User, starts Live Activity, reloads widgets. Guards against duplicate active sessions.
+- `EndSessionIntent`: Created new — ends active session, computes full SessionSummary (drinks, water, std drinks, duration, pacing adherence), ends Live Activity with final state, reloads widgets
+- All intents registered in App Intents extension (WaterlineIntents directory auto-includes) and shared to widget extension via project.yml
+- Files changed:
+  - `WaterlineIntents/LogDrinkIntent.swift` — added optional presetId parameter with DrinkPreset lookup
+  - `WaterlineIntents/StartSessionIntent.swift` (new) — start session intent
+  - `WaterlineIntents/EndSessionIntent.swift` (new) — end session intent with summary computation
+  - `project.yml` — added StartSessionIntent.swift and EndSessionIntent.swift to widget extension sources
+- **Learnings:**
+  - App Intents in extension processes create their own `ModelContainer` — they don't share the main app's container. Each intent must construct its own `ModelContainer(for:)` with all required model types.
+  - `openAppWhenRun = false` keeps intents lightweight for widget/Live Activity use — they execute in the extension process without launching the app.
+  - The pacing adherence computation in EndSessionIntent mirrors the logic in ActiveSessionView.endSession() and WaterlineApp.handleWatchEndSession() — this is duplicated in 3 places now. When WaterlineEngine (US-034) lands, all three should be consolidated.
+  - New intent files must be added to both the WaterlineIntents source path (automatic via directory inclusion) AND explicitly to WaterlineWidgets sources in project.yml for Live Activity button support.
+---
+
+## Feb 13, 2026 - US-035
+- Notification permission request screen now always shows after configure-defaults (previously only shown when time reminders were enabled)
+- Updated explanation text to match AC: "Waterline sends gentle reminders to drink water during your session. Allow notifications to get pacing nudges."
+- Added notification denied status to SettingsView reminders section: "Notifications disabled" label with "Settings" button that opens system Settings via `UIApplication.openSettingsURLString`
+- `NotificationPermissionView` already existed with "Enable Notifications" and "Skip" buttons — no changes needed there
+- Files changed: `Waterline/ConfigureDefaultsView.swift`, `Waterline/SettingsView.swift`
+- **Learnings:**
+  - Swift 6 strict concurrency: `UNNotificationSettings` from `getNotificationSettings` callback is not `Sendable`. Must extract the `Bool` value before crossing to `DispatchQueue.main.async` — same pattern as WatchConnectivity `[String: Any]` dicts.
+  - The `NotificationPermissionView` was already well-structured as a reusable sheet component with both enable and skip paths — just needed the parent to always present it.
+---

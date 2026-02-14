@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import SwiftData
 import UserNotifications
@@ -24,6 +25,8 @@ struct HomeView: View {
     @State private var navigationPath = NavigationPath()
     @State private var now = Date()
     @State private var showingDrinkSheet = false
+    @State private var showingAbandonedSessionAlert = false
+    @State private var abandonedSessionHours: Int = 0
 
     private var activeSession: Session? { activeSessions.first }
     private var userSettings: UserSettings { users.first?.settings ?? UserSettings() }
@@ -48,7 +51,7 @@ struct HomeView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
-                        SettingsView(authManager: authManager)
+                        SettingsView(authManager: authManager, syncService: syncService)
                     } label: {
                         Image(systemName: "gearshape")
                     }
@@ -60,6 +63,19 @@ struct HomeView: View {
             }
             .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { time in
                 now = time
+            }
+            .onAppear {
+                checkForAbandonedSession()
+            }
+            .alert("Session Still Running", isPresented: $showingAbandonedSessionAlert) {
+                Button("End Now", role: .destructive) {
+                    if let session = activeSession {
+                        endAbandonedSession(session)
+                    }
+                }
+                Button("Keep Going", role: .cancel) {}
+            } message: {
+                Text("Your session has been running for \(abandonedSessionHours) hours. End it?")
             }
         }
     }
@@ -152,15 +168,7 @@ struct HomeView: View {
     }
 
     private func alcoholCountSinceLastWater(for session: Session) -> Int {
-        var count = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol {
-                count += 1
-            } else if entry.type == .water {
-                count = 0
-            }
-        }
-        return count
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold).alcoholCountSinceLastWater
     }
 
     private func nextReminderCountdown(for session: Session) -> String {
@@ -237,6 +245,7 @@ struct HomeView: View {
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Quick Add Buttons
@@ -276,6 +285,7 @@ struct HomeView: View {
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
                 WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+                updateLiveActivity(for: session)
             }
         }
     }
@@ -296,6 +306,7 @@ struct HomeView: View {
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -332,26 +343,34 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Live Activity
+
+    private func updateLiveActivity(for session: Session) {
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.updateActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
+    }
+
     // MARK: - Waterline Computation
 
+    private func waterlineState(for session: Session) -> WaterlineEngine.WaterlineState {
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)
+    }
+
     private func waterlineValue(for session: Session) -> Double {
-        var value: Double = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                value += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                value -= 1
-            }
-        }
-        return value
+        waterlineState(for: session).waterlineValue
     }
 
     private func drinkCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .alcohol }.count
+        waterlineState(for: session).totalAlcoholCount
     }
 
     private func waterCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .water }.count
+        waterlineState(for: session).totalWaterCount
     }
 
     // MARK: - No Session State
@@ -407,7 +426,46 @@ struct HomeView: View {
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
 
-        // Live Activity — handled in US-032
+        // Start Live Activity
+        LiveActivityManager.startActivity(sessionId: session.id, startTime: session.startTime)
+    }
+
+    // MARK: - Abandoned Session Handling
+
+    private func checkForAbandonedSession() {
+        guard let session = activeSession else { return }
+        let elapsed = Date().timeIntervalSince(session.startTime)
+        let hours = Int(elapsed / 3600)
+        if hours >= 12 {
+            abandonedSessionHours = hours
+            showingAbandonedSessionAlert = true
+        }
+    }
+
+    private func endAbandonedSession(_ session: Session) {
+        session.endTime = Date()
+        session.isActive = false
+
+        session.computedSummary = WaterlineEngine.computeSummary(
+            from: session.logEntries,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            waterEveryN: userSettings.waterEveryNDrinks,
+            warningThreshold: warningThreshold
+        )
+
+        let state = WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)
+
+        ReminderService.cancelAllTimeReminders()
+        LiveActivityManager.endActivity(
+            waterlineValue: state.waterlineValue,
+            drinkCount: state.totalAlcoholCount,
+            waterCount: state.totalWaterCount,
+            isWarning: state.isWarning
+        )
+        try? modelContext.save()
+        syncService.triggerSync()
+        WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
     }
 
     // MARK: - Navigation Routing
@@ -417,7 +475,7 @@ struct HomeView: View {
         if activeSessions.contains(where: { $0.id == sessionId }) {
             ActiveSessionView(sessionId: sessionId, syncService: syncService)
         } else {
-            SessionSummaryView(sessionId: sessionId)
+            SessionSummaryView(sessionId: sessionId, allowsEditing: false)
         }
     }
 
