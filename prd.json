@@ -605,7 +605,7 @@
         "Configurable in Settings: \"Discreet notifications\" toggle (on by default)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "labels": [],
       "dependsOn": []
     }

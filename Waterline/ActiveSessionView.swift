@@ -451,7 +451,7 @@ struct ActiveSessionView: View {
     }
 
     private func schedulePerDrinkWaterReminder(drinkCount: Int) {
-        ReminderService.schedulePerDrinkReminder(drinkCount: drinkCount)
+        ReminderService.schedulePerDrinkReminder(drinkCount: drinkCount, discreetMode: userSettings.discreetNotifications)
     }
 }
 

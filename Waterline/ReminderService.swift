@@ -136,9 +136,16 @@ enum ReminderService {
 
     /// Schedules a per-drink water reminder notification and forwards to Apple Watch.
     /// Call when `alcoholCountSinceLastWater >= waterEveryNDrinks`.
-    static func schedulePerDrinkReminder(drinkCount: Int) {
-        let title = "Time for water"
-        let body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
+    static func schedulePerDrinkReminder(drinkCount: Int, discreetMode: Bool = true) {
+        let title: String
+        let body: String
+        if discreetMode {
+            title = "Time for a break"
+            body = "Take a moment and have some water"
+        } else {
+            title = "Time for water"
+            body = "You've had \(drinkCount) drink\(drinkCount == 1 ? "" : "s") — time for water"
+        }
 
         let content = UNMutableNotificationContent()
         content.title = title

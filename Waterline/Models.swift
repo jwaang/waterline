@@ -59,6 +59,7 @@ struct UserSettings: Codable, Equatable {
     var warningThreshold: Int = 2
     var defaultWaterAmountOz: Int = 8
     var units: VolumeUnit = .oz
+    var discreetNotifications: Bool = true
 }
 
 // MARK: - User

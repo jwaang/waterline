@@ -87,6 +87,14 @@ struct SettingsView: View {
                 }
             }
 
+            Toggle("Discreet notifications", isOn: Binding(
+                get: { settings.discreetNotifications },
+                set: { newValue in
+                    user?.settings.discreetNotifications = newValue
+                    save()
+                }
+            ))
+
             HStack {
                 Text("Water every")
                 Spacer()
@@ -104,6 +112,8 @@ struct SettingsView: View {
             }
         } header: {
             Text("Reminders")
+        } footer: {
+            Text("Hide drink counts from notification previews")
         }
         .animation(.easeInOut(duration: 0.2), value: settings.timeRemindersEnabled)
     }

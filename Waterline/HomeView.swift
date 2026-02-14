@@ -333,7 +333,7 @@ struct HomeView: View {
     }
 
     private func schedulePerDrinkWaterReminder(drinkCount: Int) {
-        ReminderService.schedulePerDrinkReminder(drinkCount: drinkCount)
+        ReminderService.schedulePerDrinkReminder(drinkCount: drinkCount, discreetMode: userSettings.discreetNotifications)
     }
 
     private func viewSessionButton(for session: Session) -> some View {

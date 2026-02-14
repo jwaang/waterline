@@ -142,7 +142,7 @@ struct WaterlineApp: App {
         let settings = (try? context.fetch(userDescriptor).first)?.settings ?? UserSettings()
         let sinceLastWater = alcoholCountSinceLastWater(session: session)
         if sinceLastWater >= settings.waterEveryNDrinks {
-            ReminderService.schedulePerDrinkReminder(drinkCount: sinceLastWater)
+            ReminderService.schedulePerDrinkReminder(drinkCount: sinceLastWater, discreetMode: settings.discreetNotifications)
         }
 
         // Check pacing warning
