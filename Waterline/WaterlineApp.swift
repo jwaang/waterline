@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import SwiftData
 import UserNotifications
@@ -97,6 +98,7 @@ struct WaterlineApp: App {
 
         ReminderService.rescheduleInactivityCheck()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivityFromSession(session)
         sendWatchUpdate(container: container, watchManager: watchManager)
     }
 
@@ -150,6 +152,7 @@ struct WaterlineApp: App {
             ReminderService.schedulePacingWarning()
         }
 
+        updateLiveActivityFromSession(session)
         sendWatchUpdate(container: container, watchManager: watchManager)
     }
 
@@ -187,6 +190,7 @@ struct WaterlineApp: App {
         }
 
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        LiveActivityManager.startActivity(sessionId: session.id, startTime: session.startTime)
         sendWatchUpdate(container: container, watchManager: watchManager)
     }
 
@@ -259,6 +263,14 @@ struct WaterlineApp: App {
         // Cancel reminders
         ReminderService.cancelAllTimeReminders()
 
+        // End Live Activity
+        LiveActivityManager.endActivity(
+            waterlineValue: wlValue,
+            drinkCount: totalDrinks,
+            waterCount: totalWater,
+            isWarning: wlValue >= Double((try? context.fetch(userDescriptor).first)?.settings.warningThreshold ?? 2)
+        )
+
         // Mark for sync and save
         session.needsSync = true
         try? context.save()
@@ -307,6 +319,20 @@ struct WaterlineApp: App {
             }
             watchManager.sendPresets(presetDicts)
         }
+    }
+
+    // MARK: - Live Activity Helper
+
+    private static func updateLiveActivityFromSession(_ session: Session, warningThreshold: Int = 2) {
+        let wl = waterlineValue(session: session)
+        let dc = session.logEntries.filter { $0.type == .alcohol }.count
+        let wc = session.logEntries.filter { $0.type == .water }.count
+        LiveActivityManager.updateActivity(
+            waterlineValue: wl,
+            drinkCount: dc,
+            waterCount: wc,
+            isWarning: wl >= Double(warningThreshold)
+        )
     }
 
     // MARK: - Computation Helpers

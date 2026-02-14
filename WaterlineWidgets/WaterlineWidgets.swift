@@ -521,6 +521,7 @@ struct WaterlineWidgets: Widget {
 struct WaterlineWidgetsBundle: WidgetBundle {
     var body: some Widget {
         WaterlineWidgets()
+        SessionLiveActivity()
     }
 }
 

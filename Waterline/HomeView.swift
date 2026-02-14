@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import SwiftData
 import UserNotifications
@@ -252,6 +253,7 @@ struct HomeView: View {
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Quick Add Buttons
@@ -291,6 +293,7 @@ struct HomeView: View {
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
                 WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+                updateLiveActivity(for: session)
             }
         }
     }
@@ -311,6 +314,7 @@ struct HomeView: View {
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Per-Drink Water Reminder
@@ -345,6 +349,18 @@ struct HomeView: View {
             Label("View Session", systemImage: "arrow.right.circle")
                 .font(.subheadline.weight(.medium))
         }
+    }
+
+    // MARK: - Live Activity
+
+    private func updateLiveActivity(for session: Session) {
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.updateActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
     }
 
     // MARK: - Waterline Computation
@@ -422,7 +438,8 @@ struct HomeView: View {
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
 
-        // Live Activity — handled in US-032
+        // Start Live Activity
+        LiveActivityManager.startActivity(sessionId: session.id, startTime: session.startTime)
     }
 
     // MARK: - Abandoned Session Handling
@@ -487,6 +504,12 @@ struct HomeView: View {
         )
 
         ReminderService.cancelAllTimeReminders()
+        LiveActivityManager.endActivity(
+            waterlineValue: wlValue,
+            drinkCount: totalDrinks,
+            waterCount: totalWater,
+            isWarning: wlValue >= Double(warningThreshold)
+        )
         try? modelContext.save()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")

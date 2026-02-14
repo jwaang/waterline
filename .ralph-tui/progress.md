@@ -13,6 +13,7 @@ after each iteration and it's included in prompts for context.
 - **Sync architecture**: Offline-first with `needsSync` flags on all models. SyncService uses NWPathMonitor for connectivity, auto-syncs on reconnection. All writes go to SwiftData first, then `triggerSync()`. When modifying already-synced records (e.g., ending a session), must re-set `needsSync = true` before saving.
 - **WatchConnectivity protocol**: Phone→watch uses `updateApplicationContext` (session state) and `sendMessage`/`transferUserInfo` (presets, reminders). Watch→phone uses `sendMessage` for commands (logWater, logDrink, startSession). Watch has no SwiftData — receives precomputed state and lightweight preset dicts. All watch commands are handled in `WaterlineApp` static methods which create SwiftData entries and call `sendWatchUpdate()` to push refreshed state back.
 - **Swift 6 concurrency + WCSessionDelegate**: `[String: Any]` dicts from WCSession delegate methods are not `Sendable`. Bridge via `JSONSerialization.data`→`Data` (Sendable)→decode on MainActor. Don't use `as! Sendable` or `as Sendable` casts.
+- **Live Activity pattern**: `LiveActivityManager` (static enum) handles start/update/end. `SessionActivityAttributes.swift` is shared across main app + widget extension + intents extension via XcodeGen shared source paths. Every log action (phone, watch, widget, Live Activity) must call `LiveActivityManager.updateActivity(...)` after persisting. App Intents update Live Activities directly via `Activity<SessionActivityAttributes>.activities`.
 
 ---
 
@@ -82,4 +83,32 @@ after each iteration and it's included in prompts for context.
   - `sendSessionState` was defined but never called — the watch was a display-only shell. Watch state updates must be explicitly pushed after every data mutation (both watch-originated and phone-originated commands).
   - Watch app doesn't share SwiftData models — it uses lightweight `WatchPreset` structs deserialized from dictionaries. Keep watch-side data structures minimal and independent.
   - Default drink presets are hardcoded as fallback in WatchContentView for when phone hasn't synced presets yet (e.g., first launch or watch not reachable).
+---
+
+## Feb 13, 2026 - US-032
+- Implemented Live Activity / Dynamic Island for active drinking sessions
+- Live Activity starts when session starts (from phone, watch, or widget)
+- Displays: Waterline value, drink/water counts, session duration timer, quick-action buttons
+- Dynamic Island compact: drop icon + waterline value; expanded: full counts + quick-add buttons
+- Lock Screen view: waterline value, counts, duration, "+ Drink" and "+ Water" buttons via App Intents
+- Updates in near-real-time: every log action (drink, water, preset, delete) pushes new state to Live Activity
+- Live Activity ends when session ends (from phone, watch, or abandoned session handler)
+- App Intents (LogDrinkIntent, LogWaterIntent) also update Live Activity after logging
+- Files changed:
+  - `Waterline/SessionActivityAttributes.swift` (new) — ActivityKit attributes + content state
+  - `Waterline/LiveActivityManager.swift` (new) — start/update/end Live Activity lifecycle
+  - `WaterlineWidgets/SessionLiveActivity.swift` (new) — Live Activity UI (lock screen + Dynamic Island)
+  - `WaterlineWidgets/WaterlineWidgets.swift` — added SessionLiveActivity to widget bundle
+  - `Waterline/HomeView.swift` — start Live Activity on session start, update on log actions
+  - `Waterline/ActiveSessionView.swift` — update on log/delete, end on session end
+  - `Waterline/WaterlineApp.swift` — update/start/end for watch-originated commands
+  - `WaterlineIntents/LogDrinkIntent.swift` — recompute + update Live Activity after logging
+  - `WaterlineIntents/LogWaterIntent.swift` — recompute + update Live Activity after logging
+  - `project.yml` — NSSupportsLiveActivities, shared SessionActivityAttributes source across targets
+- **Learnings:**
+  - `SessionActivityAttributes` must be compiled into both the main app target AND the widget extension target. Use XcodeGen shared source paths to include it in both without duplicating the file.
+  - Live Activity UI goes in the widget bundle (WidgetBundle), not the main app — add it alongside existing widgets with `SessionLiveActivity()` in the bundle body.
+  - `NSSupportsLiveActivities: true` must be in both the main app Info.plist (via `INFOPLIST_KEY_NSSupportsLiveActivities`) and the widget extension's Info.plist properties.
+  - App Intents in the extension process can update Live Activities directly via `Activity<T>.activities` — no need for IPC back to the main app.
+  - The `LiveActivityManager` pattern (static enum with start/update/end) keeps Live Activity logic decoupled from views and testable.
 ---

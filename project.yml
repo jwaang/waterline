@@ -25,6 +25,7 @@ targets:
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_NSSupportsLiveActivities: true
         SWIFT_EMIT_LOC_STRINGS: true
     dependencies:
       - target: WaterlineWidgets
@@ -52,6 +53,7 @@ targets:
         excludes:
           - "Info.plist"
       - path: Waterline/Models.swift
+      - path: Waterline/SessionActivityAttributes.swift
       - path: WaterlineIntents/LogDrinkIntent.swift
       - path: WaterlineIntents/LogWaterIntent.swift
     info:
@@ -60,6 +62,7 @@ targets:
         CFBundleDisplayName: WaterlineWidgets
         CFBundleShortVersionString: "1.0.0"
         CFBundleVersion: "1"
+        NSSupportsLiveActivities: true
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
@@ -75,6 +78,7 @@ targets:
         excludes:
           - "Info.plist"
       - path: Waterline/Models.swift
+      - path: Waterline/SessionActivityAttributes.swift
     info:
       path: WaterlineIntents/Info.plist
       properties:

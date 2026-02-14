@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 import SwiftData
 import Combine
@@ -114,7 +115,14 @@ struct ActiveSessionView: View {
         // Cancel all active reminders
         ReminderService.cancelAllTimeReminders()
 
-        // End Live Activity — will be fully implemented in US-032
+        // End Live Activity
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.endActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
 
         // Mark for sync and persist
         session.needsSync = true
@@ -196,6 +204,18 @@ struct ActiveSessionView: View {
 
         guard waterDueCount > 0 else { return 1.0 }
         return Double(waterLoggedCount) / Double(waterDueCount)
+    }
+
+    // MARK: - Live Activity
+
+    private func updateLiveActivity(for session: Session) {
+        let wl = waterlineValue(for: session)
+        LiveActivityManager.updateActivity(
+            waterlineValue: wl,
+            drinkCount: drinkCount(for: session),
+            waterCount: waterCount(for: session),
+            isWarning: wl >= Double(warningThreshold)
+        )
     }
 
     // MARK: - Counts
@@ -330,6 +350,7 @@ struct ActiveSessionView: View {
         try? modelContext.save()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Waterline Computation
@@ -412,6 +433,7 @@ struct ActiveSessionView: View {
         checkPacingWarning(for: session, addedEstimate: preset.standardDrinkEstimate)
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Quick Add Buttons
@@ -451,6 +473,7 @@ struct ActiveSessionView: View {
                 checkPacingWarning(for: session, addedEstimate: estimate)
                 syncService.triggerSync()
                 WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+                updateLiveActivity(for: session)
             }
         }
     }
@@ -471,6 +494,7 @@ struct ActiveSessionView: View {
         ReminderService.rescheduleInactivityCheck()
         syncService.triggerSync()
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
+        updateLiveActivity(for: session)
     }
 
     // MARK: - Per-Drink Water Reminder
