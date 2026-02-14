@@ -112,3 +112,22 @@ after each iteration and it's included in prompts for context.
   - App Intents in the extension process can update Live Activities directly via `Activity<T>.activities` — no need for IPC back to the main app.
   - The `LiveActivityManager` pattern (static enum with start/update/end) keeps Live Activity logic decoupled from views and testable.
 ---
+
+## Feb 13, 2026 - US-033
+- Implemented all four App Intents for interactive widgets, Live Activity, and Siri
+- `LogDrinkIntent`: Updated with optional `presetId` String parameter — resolves DrinkPreset from SwiftData to use its drinkType/sizeOz/standardDrinkEstimate; defaults to standard beer (1.0 std) if no preset provided
+- `LogWaterIntent`: Already existed and complete — logs water with user's default amount
+- `StartSessionIntent`: Created new — creates Session in SwiftData, associates with User, starts Live Activity, reloads widgets. Guards against duplicate active sessions.
+- `EndSessionIntent`: Created new — ends active session, computes full SessionSummary (drinks, water, std drinks, duration, pacing adherence), ends Live Activity with final state, reloads widgets
+- All intents registered in App Intents extension (WaterlineIntents directory auto-includes) and shared to widget extension via project.yml
+- Files changed:
+  - `WaterlineIntents/LogDrinkIntent.swift` — added optional presetId parameter with DrinkPreset lookup
+  - `WaterlineIntents/StartSessionIntent.swift` (new) — start session intent
+  - `WaterlineIntents/EndSessionIntent.swift` (new) — end session intent with summary computation
+  - `project.yml` — added StartSessionIntent.swift and EndSessionIntent.swift to widget extension sources
+- **Learnings:**
+  - App Intents in extension processes create their own `ModelContainer` — they don't share the main app's container. Each intent must construct its own `ModelContainer(for:)` with all required model types.
+  - `openAppWhenRun = false` keeps intents lightweight for widget/Live Activity use — they execute in the extension process without launching the app.
+  - The pacing adherence computation in EndSessionIntent mirrors the logic in ActiveSessionView.endSession() and WaterlineApp.handleWatchEndSession() — this is duplicated in 3 places now. When WaterlineEngine (US-034) lands, all three should be consolidated.
+  - New intent files must be added to both the WaterlineIntents source path (automatic via directory inclusion) AND explicitly to WaterlineWidgets sources in project.yml for Live Activity button support.
+---

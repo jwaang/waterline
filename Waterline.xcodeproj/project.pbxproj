@@ -19,6 +19,7 @@
 		349E4803DA753D20A5770F6F /* WaterlineIntentsExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */; };
 		359843854A298871D80AFCBB /* LogEntryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDC5CFC80E88D27C379A4E4B /* LogEntryRow.swift */; };
 		35E1247D74602F7B8A7D4E89 /* WaterlineApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FC30BDE82B26B39B8C89DD2 /* WaterlineApp.swift */; };
+		3E6316525407024549C49BAC /* StartSessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DCE88C6292B27573A78D0B /* StartSessionIntent.swift */; };
 		44C3491CC911D09054395C9A /* EditLogEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1DA8348C354E4F66E5B7D1 /* EditLogEntryView.swift */; };
 		53ADDC4EC5CE9614BA08F652 /* SessionActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A8D779693243412C74FBC7 /* SessionActivityAttributes.swift */; };
 		54C1DE29AA70EFA3427E6BD2 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA0B9A74998663E2DAFA317 /* Models.swift */; };
@@ -38,6 +39,7 @@
 		AD0B4F626EBA7DB56047EB45 /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20FA07103593D917FC1FECDE /* WatchContentView.swift */; };
 		AF6C2F792A80AF0F72F13557 /* LogDrinkIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65E115F53D7E81EF8D6E11D /* LogDrinkIntent.swift */; };
 		B36260921FBACB5DFF6526B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AADF82E897611F993792D175 /* Assets.xcassets */; };
+		B439A86CAD1820627AA935E5 /* EndSessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49CAAE331B1C2B905EFF4298 /* EndSessionIntent.swift */; };
 		C9708B583690A2E40D290891 /* SyncStatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E839C4D0AD536E0E1D896D65 /* SyncStatusIndicator.swift */; };
 		C98E5F7B760FE0E56AE8A771 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D15AF08F7CE9A78C8D88B2 /* AuthenticationManager.swift */; };
 		CCA846A88E58371F54278E2D /* WaterlineTimelineProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06EDBC77D401C88FBD318B11 /* WaterlineTimelineProvider.swift */; };
@@ -49,7 +51,9 @@
 		F1F41C1A1A74EEAEF2042AD0 /* LogWaterIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDDD8FA063EC599A155B751 /* LogWaterIntent.swift */; };
 		F3ADDEB8A5D1D4374199FBB9 /* WaterlineIntents.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = DB25235E71F78A8696A30094 /* WaterlineIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F5E87208627E199832A926AE /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EA0B9A74998663E2DAFA317 /* Models.swift */; };
+		F7EEAA3D8478D94245E4B3B7 /* StartSessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87DCE88C6292B27573A78D0B /* StartSessionIntent.swift */; };
 		FC3EA435F79AF6789E1C7DEA /* LogWaterIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BDDD8FA063EC599A155B751 /* LogWaterIntent.swift */; };
+		FE61A7E1F3AFC5AB850D65CC /* EndSessionIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49CAAE331B1C2B905EFF4298 /* EndSessionIntent.swift */; };
 		FFE0AC7B95BD7285FC10703D /* ActiveSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7203C31DCB9904FD9E6C1E64 /* ActiveSessionView.swift */; };
 /* End PBXBuildFile section */
 
@@ -106,6 +110,7 @@
 		418AFCC644115066C972174A /* ConfigureDefaultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigureDefaultsView.swift; sourceTree = "<group>"; };
 		45DD6621139B9298618E56EA /* ConvexService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConvexService.swift; sourceTree = "<group>"; };
 		45E1ECA5868A954E9047FD8A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		49CAAE331B1C2B905EFF4298 /* EndSessionIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EndSessionIntent.swift; sourceTree = "<group>"; };
 		53A8D779693243412C74FBC7 /* SessionActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionActivityAttributes.swift; sourceTree = "<group>"; };
 		57FBFAFDFF394F0980B0F734 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		5FC30BDE82B26B39B8C89DD2 /* WaterlineApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineApp.swift; sourceTree = "<group>"; };
@@ -118,6 +123,7 @@
 		77DC1A7D167FC4E8FE09E140 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		78F823B13F5C7298B4DAB9FE /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		86FD0E22BE61C14F7AB19AB3 /* SyncService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncService.swift; sourceTree = "<group>"; };
+		87DCE88C6292B27573A78D0B /* StartSessionIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartSessionIntent.swift; sourceTree = "<group>"; };
 		88DF8AB6AC47AD0653B444B0 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterlineIntentsExtension.swift; sourceTree = "<group>"; };
 		8EA0B9A74998663E2DAFA317 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -218,8 +224,10 @@
 		B9039EB44F521C68D9F1AF78 /* WaterlineIntents */ = {
 			isa = PBXGroup;
 			children = (
+				49CAAE331B1C2B905EFF4298 /* EndSessionIntent.swift */,
 				F65E115F53D7E81EF8D6E11D /* LogDrinkIntent.swift */,
 				6BDDD8FA063EC599A155B751 /* LogWaterIntent.swift */,
+				87DCE88C6292B27573A78D0B /* StartSessionIntent.swift */,
 				8A2992B9C6826265599D1711 /* WaterlineIntentsExtension.swift */,
 			);
 			path = WaterlineIntents;
@@ -397,11 +405,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FE61A7E1F3AFC5AB850D65CC /* EndSessionIntent.swift in Sources */,
 				722A6363D11FAC6774E51D4B /* LogDrinkIntent.swift in Sources */,
 				F1F41C1A1A74EEAEF2042AD0 /* LogWaterIntent.swift in Sources */,
 				A3D08E12CD248F2FC093B8D7 /* Models.swift in Sources */,
 				82C6F28D49ED9F5505491E90 /* SessionActivityAttributes.swift in Sources */,
 				1F3B5EF6D04AB2044CBEF4CA /* SessionLiveActivity.swift in Sources */,
+				3E6316525407024549C49BAC /* StartSessionIntent.swift in Sources */,
 				CCA846A88E58371F54278E2D /* WaterlineTimelineProvider.swift in Sources */,
 				2242C6E17B5696CA8415D967 /* WaterlineWidgets.swift in Sources */,
 			);
@@ -421,10 +431,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B439A86CAD1820627AA935E5 /* EndSessionIntent.swift in Sources */,
 				AF6C2F792A80AF0F72F13557 /* LogDrinkIntent.swift in Sources */,
 				FC3EA435F79AF6789E1C7DEA /* LogWaterIntent.swift in Sources */,
 				F5E87208627E199832A926AE /* Models.swift in Sources */,
 				53ADDC4EC5CE9614BA08F652 /* SessionActivityAttributes.swift in Sources */,
+				F7EEAA3D8478D94245E4B3B7 /* StartSessionIntent.swift in Sources */,
 				349E4803DA753D20A5770F6F /* WaterlineIntentsExtension.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -5,7 +5,10 @@ import WidgetKit
 
 struct LogDrinkIntent: AppIntent {
     static let title: LocalizedStringResource = "Log Drink"
-    static let description = IntentDescription("Log a standard alcoholic drink to your active session.")
+    static let description = IntentDescription("Log an alcoholic drink to your active session.")
+
+    @Parameter(title: "Preset ID", description: "Optional drink preset ID to use instead of default standard drink.")
+    var presetId: String?
 
     func perform() async throws -> some IntentResult {
         let container = try ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self)
@@ -18,12 +21,31 @@ struct LogDrinkIntent: AppIntent {
             return .result()
         }
 
+        // Resolve preset if provided
+        var drinkType: DrinkType = .beer
+        var sizeOz: Double = 12
+        var standardDrinkEstimate: Double = 1.0
+        var resolvedPresetId: UUID?
+
+        if let presetIdString = presetId, let presetUUID = UUID(uuidString: presetIdString) {
+            let presetDescriptor = FetchDescriptor<DrinkPreset>(
+                predicate: #Predicate { $0.id == presetUUID }
+            )
+            if let preset = try? context.fetch(presetDescriptor).first {
+                drinkType = preset.drinkType
+                sizeOz = preset.sizeOz
+                standardDrinkEstimate = preset.standardDrinkEstimate
+                resolvedPresetId = preset.id
+            }
+        }
+
         let entry = LogEntry(
             type: .alcohol,
             alcoholMeta: AlcoholMeta(
-                drinkType: .beer,
-                sizeOz: 12,
-                standardDrinkEstimate: 1.0
+                drinkType: drinkType,
+                sizeOz: sizeOz,
+                standardDrinkEstimate: standardDrinkEstimate,
+                presetId: resolvedPresetId
             ),
             source: .widget
         )
