@@ -115,99 +115,44 @@ struct SessionSummaryView: View {
     // MARK: - Recompute Summary
 
     private func recomputeSummary(for session: Session) {
-        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-
-        let totalDrinks = entries.filter { $0.type == .alcohol }.count
-        let totalWater = entries.filter { $0.type == .water }.count
-        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
-
-        let duration: TimeInterval
-        if let endTime = session.endTime {
-            duration = endTime.timeIntervalSince(session.startTime)
-        } else {
-            duration = Date().timeIntervalSince(session.startTime)
-        }
-
-        let adherence = computePacingAdherence(for: session)
-
-        var wlValue: Double = 0
-        for entry in entries {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                wlValue += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                wlValue -= 1
-            }
-        }
-
-        session.computedSummary = SessionSummary(
-            totalDrinks: totalDrinks,
-            totalWater: totalWater,
-            totalStandardDrinks: totalStdDrinks,
-            durationSeconds: duration,
-            pacingAdherence: adherence,
-            finalWaterlineValue: wlValue
+        session.computedSummary = WaterlineEngine.computeSummary(
+            from: session.logEntries,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            waterEveryN: userSettings.waterEveryNDrinks,
+            warningThreshold: userSettings.warningThreshold
         )
         try? modelContext.save()
     }
 
     // MARK: - Computation
 
+    private func waterlineState(for session: Session) -> WaterlineEngine.WaterlineState {
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: userSettings.warningThreshold)
+    }
+
     private func waterlineValue(for session: Session) -> Double {
-        var value: Double = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                value += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                value -= 1
-            }
-        }
-        return value
+        waterlineState(for: session).waterlineValue
     }
 
     private func drinkCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .alcohol }.count
+        waterlineState(for: session).totalAlcoholCount
     }
 
     private func waterCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .water }.count
+        waterlineState(for: session).totalWaterCount
     }
 
     private func totalStandardDrinks(for session: Session) -> Double {
-        session.logEntries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
+        waterlineState(for: session).totalStandardDrinks
     }
 
     private func totalWaterVolume(for session: Session) -> Int {
-        Int(session.logEntries.filter { $0.type == .water }.compactMap { $0.waterMeta?.amountOz }.reduce(0, +))
+        Int(waterlineState(for: session).totalWaterVolumeOz)
     }
 
-    /// Chunk-based pacing adherence: walks entries in order, tracking groups of N drinks.
-    /// When drinksSinceWater reaches waterEveryN, a water opportunity is due.
-    /// Water entries logged when there are outstanding opportunities count as adherence.
     private func computePacingAdherence(for session: Session) -> Double {
-        let waterEveryN = userSettings.waterEveryNDrinks
-        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-
-        var waterDueCount = 0
-        var waterLoggedCount = 0
-        var drinksSinceWater = 0
-
-        for entry in entries {
-            if entry.type == .alcohol {
-                drinksSinceWater += 1
-                if drinksSinceWater >= waterEveryN {
-                    waterDueCount += 1
-                    drinksSinceWater = 0
-                }
-            } else if entry.type == .water {
-                if waterDueCount > waterLoggedCount {
-                    waterLoggedCount += 1
-                }
-                drinksSinceWater = 0
-            }
-        }
-
-        guard waterDueCount > 0 else { return 1.0 }
-        return min(Double(waterLoggedCount) / Double(waterDueCount), 1.0)
+        WaterlineEngine.computePacingAdherence(from: session.logEntries, waterEveryN: userSettings.waterEveryNDrinks)
     }
 
     private func durationText(for session: Session) -> String {

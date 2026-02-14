@@ -33,27 +33,14 @@ struct LogWaterIntent: AppIntent {
         try context.save()
 
         // Recompute state for Live Activity update
-        let logs = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-        var wl: Double = 0
-        var dc = 0
-        var wc = 0
-        for log in logs {
-            if log.type == .alcohol, let meta = log.alcoholMeta {
-                wl += meta.standardDrinkEstimate
-                dc += 1
-            } else if log.type == .water {
-                wl -= 1
-                wc += 1
-            }
-        }
-
         let threshold = user?.settings.warningThreshold ?? 2
+        let engineState = WaterlineEngine.computeState(from: session.logEntries, warningThreshold: threshold)
 
         let state = SessionActivityAttributes.ContentState(
-            waterlineValue: wl,
-            drinkCount: dc,
-            waterCount: wc,
-            isWarning: wl >= Double(threshold)
+            waterlineValue: engineState.waterlineValue,
+            drinkCount: engineState.totalAlcoholCount,
+            waterCount: engineState.totalWaterCount,
+            isWarning: engineState.isWarning
         )
         let content = ActivityContent(state: state, staleDate: nil)
         for activity in Activity<SessionActivityAttributes>.activities {

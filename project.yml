@@ -54,6 +54,7 @@ targets:
           - "Info.plist"
       - path: Waterline/Models.swift
       - path: Waterline/SessionActivityAttributes.swift
+      - path: Waterline/WaterlineEngine.swift
       - path: WaterlineIntents/LogDrinkIntent.swift
       - path: WaterlineIntents/LogWaterIntent.swift
       - path: WaterlineIntents/StartSessionIntent.swift
@@ -81,6 +82,7 @@ targets:
           - "Info.plist"
       - path: Waterline/Models.swift
       - path: Waterline/SessionActivityAttributes.swift
+      - path: Waterline/WaterlineEngine.swift
     info:
       path: WaterlineIntents/Info.plist
       properties:

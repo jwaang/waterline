@@ -168,15 +168,7 @@ struct HomeView: View {
     }
 
     private func alcoholCountSinceLastWater(for session: Session) -> Int {
-        var count = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol {
-                count += 1
-            } else if entry.type == .water {
-                count = 0
-            }
-        }
-        return count
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold).alcoholCountSinceLastWater
     }
 
     private func nextReminderCountdown(for session: Session) -> String {
@@ -365,24 +357,20 @@ struct HomeView: View {
 
     // MARK: - Waterline Computation
 
+    private func waterlineState(for session: Session) -> WaterlineEngine.WaterlineState {
+        WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)
+    }
+
     private func waterlineValue(for session: Session) -> Double {
-        var value: Double = 0
-        for entry in session.logEntries.sorted(by: { $0.timestamp < $1.timestamp }) {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                value += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                value -= 1
-            }
-        }
-        return value
+        waterlineState(for: session).waterlineValue
     }
 
     private func drinkCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .alcohol }.count
+        waterlineState(for: session).totalAlcoholCount
     }
 
     private func waterCount(for session: Session) -> Int {
-        session.logEntries.filter { $0.type == .water }.count
+        waterlineState(for: session).totalWaterCount
     }
 
     // MARK: - No Session State
@@ -458,57 +446,22 @@ struct HomeView: View {
         session.endTime = Date()
         session.isActive = false
 
-        // Compute summary
-        let entries = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-        let totalDrinks = entries.filter { $0.type == .alcohol }.count
-        let totalWater = entries.filter { $0.type == .water }.count
-        let totalStdDrinks = entries.compactMap { $0.alcoholMeta?.standardDrinkEstimate }.reduce(0, +)
-        let duration = session.endTime!.timeIntervalSince(session.startTime)
-
-        let waterEveryN = userSettings.waterEveryNDrinks
-        var drinksSinceWater = 0
-        var waterDueCount = 0
-        var waterLoggedCount = 0
-        for entry in entries {
-            if entry.type == .alcohol {
-                drinksSinceWater += 1
-                if drinksSinceWater >= waterEveryN {
-                    waterDueCount += 1
-                    drinksSinceWater = 0
-                }
-            } else if entry.type == .water {
-                if waterDueCount > waterLoggedCount {
-                    waterLoggedCount = min(waterLoggedCount + 1, waterDueCount)
-                }
-                drinksSinceWater = 0
-            }
-        }
-        let adherence = waterDueCount > 0 ? Double(waterLoggedCount) / Double(waterDueCount) : 1.0
-
-        var wlValue: Double = 0
-        for entry in entries {
-            if entry.type == .alcohol, let meta = entry.alcoholMeta {
-                wlValue += meta.standardDrinkEstimate
-            } else if entry.type == .water {
-                wlValue -= 1
-            }
-        }
-
-        session.computedSummary = SessionSummary(
-            totalDrinks: totalDrinks,
-            totalWater: totalWater,
-            totalStandardDrinks: totalStdDrinks,
-            durationSeconds: duration,
-            pacingAdherence: adherence,
-            finalWaterlineValue: wlValue
+        session.computedSummary = WaterlineEngine.computeSummary(
+            from: session.logEntries,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            waterEveryN: userSettings.waterEveryNDrinks,
+            warningThreshold: warningThreshold
         )
+
+        let state = WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)
 
         ReminderService.cancelAllTimeReminders()
         LiveActivityManager.endActivity(
-            waterlineValue: wlValue,
-            drinkCount: totalDrinks,
-            waterCount: totalWater,
-            isWarning: wlValue >= Double(warningThreshold)
+            waterlineValue: state.waterlineValue,
+            drinkCount: state.totalAlcoholCount,
+            waterCount: state.totalWaterCount,
+            isWarning: state.isWarning
         )
         try? modelContext.save()
         syncService.triggerSync()
