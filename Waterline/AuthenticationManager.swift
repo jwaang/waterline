@@ -46,9 +46,10 @@ final class AuthenticationManager {
 
     // MARK: - Restore Session
 
-    func restoreSession() {
+    func restoreSession(modelContext: ModelContext) {
         if let storedUserId = store.read(key: keychainKey) {
             authState = .signedIn(appleUserId: storedUserId)
+            createLocalUserIfNeeded(appleUserId: storedUserId, modelContext: modelContext)
         } else {
             authState = .signedOut
         }
@@ -80,6 +81,18 @@ final class AuthenticationManager {
         authState = .signedOut
         errorMessage = nil
     }
+
+    // MARK: - Dev Bypass
+
+    #if DEBUG
+    /// Bypasses Apple Sign In for development. Creates a local user with a stable dev ID.
+    func devSignIn(modelContext: ModelContext) {
+        let devAppleUserId = "dev-user-00000"
+        store.save(key: keychainKey, value: devAppleUserId)
+        authState = .signedIn(appleUserId: devAppleUserId)
+        createLocalUserIfNeeded(appleUserId: devAppleUserId, modelContext: modelContext)
+    }
+    #endif
 
     // MARK: - Dismiss Error
 

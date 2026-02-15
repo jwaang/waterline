@@ -10,7 +10,10 @@ struct RootView: View {
         Group {
             switch authManager.authState {
             case .unknown:
-                ProgressView()
+                ZStack {
+                    Color.wlBase.ignoresSafeArea()
+                    WLStatusFlag("AUTHENTICATING")
+                }
             case .signedOut:
                 if hasCompletedOnboarding {
                     SignInView(authManager: authManager)
@@ -27,8 +30,8 @@ struct RootView: View {
                 }
             }
         }
-        .animation(.default, value: authManager.authState)
-        .animation(.default, value: hasCompletedOnboarding)
+        .animation(.easeInOut(duration: 0.15), value: authManager.authState)
+        .animation(.easeInOut(duration: 0.15), value: hasCompletedOnboarding)
     }
 }
 

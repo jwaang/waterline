@@ -27,11 +27,16 @@ struct EditLogEntryView: View {
                     waterEditor
                 }
             }
-            .navigationTitle("Edit Entry")
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Color.wlBase)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("EDIT ENTRY")
+                        .font(.wlHeadline)
+                        .foregroundStyle(Color.wlInk)
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(Color.wlSecondary)
                 }
             }
             .onAppear {
@@ -55,26 +60,22 @@ struct EditLogEntryView: View {
 
     private var drinkTypePicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Type")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+            Text("TYPE")
+                .wlTechnical()
 
-            Picker("Drink Type", selection: $selectedType) {
-                ForEach(DrinkType.allCases, id: \.self) { type in
-                    Text(type.displayName).tag(type)
-                }
-            }
-            .pickerStyle(.segmented)
+            WLSegmentedPicker(
+                options: DrinkType.allCases.map { ($0.displayName.uppercased(), $0) },
+                selection: $selectedType
+            )
         }
     }
 
     private var sizePresetPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Size")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+            Text("SIZE")
+                .wlTechnical()
 
-            HStack(spacing: 12) {
+            HStack(spacing: 8) {
                 ForEach(presets) { preset in
                     Button {
                         selectedPreset = preset
@@ -82,24 +83,18 @@ struct EditLogEntryView: View {
                     } label: {
                         VStack(spacing: 4) {
                             Text(preset.label)
-                                .font(.subheadline.weight(.medium))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(selectedPreset?.id == preset.id ? Color.wlBase : Color.wlInk)
                             Text("\(preset.standardDrinkEstimate, specifier: "%.1f") std")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.wlTechnicalMono)
+                                .foregroundStyle(selectedPreset?.id == preset.id ? Color.wlBase.opacity(0.7) : Color.wlSecondary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(selectedPreset?.id == preset.id
-                                      ? Color.accentColor.opacity(0.15)
-                                      : Color(.systemGray6))
-                        )
+                        .background(selectedPreset?.id == preset.id ? Color.wlInk : Color.clear)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .strokeBorder(selectedPreset?.id == preset.id
-                                              ? Color.accentColor
-                                              : Color.clear, lineWidth: 2)
+                            Rectangle()
+                                .strokeBorder(selectedPreset?.id == preset.id ? Color.clear : Color.wlTertiary, lineWidth: 1)
                         )
                     }
                     .buttonStyle(.plain)
@@ -109,66 +104,26 @@ struct EditLogEntryView: View {
     }
 
     private var estimateAdjuster: some View {
-        VStack(spacing: 8) {
-            Text("Standard Drink Estimate")
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 16) {
-                Button {
-                    adjustedEstimate = max(0.5, adjustedEstimate - 0.5)
-                } label: {
-                    Image(systemName: "minus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text("\(adjustedEstimate, specifier: "%.1f")")
-                    .font(.title.weight(.bold).monospacedDigit())
-                    .frame(minWidth: 60)
-
-                Button {
-                    adjustedEstimate = min(5.0, adjustedEstimate + 0.5)
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
+        WLDoubleStepper(
+            label: "STANDARD DRINK ESTIMATE",
+            value: $adjustedEstimate,
+            range: 0.5...5.0,
+            step: 0.5
+        )
     }
 
     // MARK: - Water Editor
 
     private var waterEditor: some View {
         VStack(spacing: 24) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Amount (oz)")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 16) {
-                    Button {
-                        waterAmountOz = max(1, waterAmountOz - 1)
-                    } label: {
-                        Image(systemName: "minus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Text("\(Int(waterAmountOz)) oz")
-                        .font(.title.weight(.bold).monospacedDigit())
-                        .frame(minWidth: 80)
-
-                    Button {
-                        waterAmountOz = min(32, waterAmountOz + 1)
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
+            WLDoubleStepper(
+                label: "AMOUNT (OZ)",
+                value: $waterAmountOz,
+                range: 1...32,
+                step: 1,
+                format: "%.0f",
+                displaySuffix: " oz"
+            )
 
             Spacer()
             saveButton
@@ -179,15 +134,9 @@ struct EditLogEntryView: View {
     // MARK: - Save
 
     private var saveButton: some View {
-        Button {
+        WLActionBlock(label: "Save") {
             saveChanges()
-        } label: {
-            Label("Save Changes", systemImage: "checkmark")
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
         }
-        .buttonStyle(.borderedProminent)
     }
 
     private func saveChanges() {
@@ -213,7 +162,6 @@ struct EditLogEntryView: View {
         if let meta = entry.alcoholMeta {
             selectedType = meta.drinkType
             adjustedEstimate = meta.standardDrinkEstimate
-            // Find matching size preset
             let matchingPreset = presets.first { $0.sizeOz == meta.sizeOz }
             selectedPreset = matchingPreset ?? presets.first
         }

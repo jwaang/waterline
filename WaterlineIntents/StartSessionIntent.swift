@@ -9,7 +9,7 @@ struct StartSessionIntent: AppIntent {
     static let openAppWhenRun: Bool = false
 
     func perform() async throws -> some IntentResult {
-        let container = try ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self)
+        let container = try SharedModelContainer.create()
         let context = ModelContext(container)
 
         // Only one active session allowed
@@ -37,9 +37,13 @@ struct StartSessionIntent: AppIntent {
             return .result()
         }
 
+        let userDescriptor2 = FetchDescriptor<User>()
+        let threshold = (try? context.fetch(userDescriptor2).first)?.settings.warningThreshold ?? 2
+
         let attributes = SessionActivityAttributes(
             sessionId: session.id.uuidString,
-            startTime: session.startTime
+            startTime: session.startTime,
+            warningThreshold: threshold
         )
         let initialState = SessionActivityAttributes.ContentState(
             waterlineValue: 0,

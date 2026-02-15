@@ -12,3 +12,12 @@ node_modules/
 
 # Package manager
 package-lock.json
+
+.env.local
+
+# Xcode user data
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Convex generated
+convex/_generated/

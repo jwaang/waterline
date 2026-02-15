@@ -17,7 +17,7 @@ struct OnboardingView: View {
                 SignInView(authManager: authManager)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: currentPage)
+        .animation(.easeInOut(duration: 0.15), value: currentPage)
     }
 }
 
@@ -39,34 +39,24 @@ struct WelcomeScreen: View {
             Spacer()
 
             VStack(spacing: 24) {
-                Image(systemName: "drop.fill")
-                    .font(.system(size: 72, weight: .light))
-                    .foregroundStyle(.blue.opacity(0.8))
+                Text("WATERLINE")
+                    .font(.wlDisplayLarge)
+                    .foregroundStyle(Color.wlInk)
 
-                VStack(spacing: 12) {
-                    Text("Waterline")
-                        .font(.largeTitle.bold())
-
-                    Text("Waterline helps you pace and drink less by adding water breaks.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
+                Text("Waterline helps you pace and drink less by adding water breaks.")
+                    .font(.wlBody)
+                    .foregroundStyle(Color.wlSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
             }
 
             Spacer()
 
-            Button(action: onContinue) {
-                Text("Continue")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 48)
+            WLActionBlock(label: "Continue", action: onContinue)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 48)
         }
+        .background(Color.wlBase)
     }
 }
 
@@ -80,17 +70,17 @@ struct GuardrailScreen: View {
             Spacer()
 
             VStack(spacing: 24) {
-                Image(systemName: "hand.raised")
-                    .font(.system(size: 56, weight: .light))
-                    .foregroundStyle(.orange.opacity(0.8))
+                Text("NOTICE")
+                    .wlTechnical()
 
                 VStack(spacing: 12) {
                     Text("Before you begin")
-                        .font(.title2.bold())
+                        .font(.wlHeadline)
+                        .foregroundStyle(Color.wlInk)
 
                     Text("This is a pacing tool. It does not estimate intoxication or guarantee how you'll feel tomorrow.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
+                        .font(.wlBody)
+                        .foregroundStyle(Color.wlSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
@@ -98,15 +88,10 @@ struct GuardrailScreen: View {
 
             Spacer()
 
-            Button(action: onContinue) {
-                Text("I understand")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 48)
+            WLActionBlock(label: "I understand", action: onContinue)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 48)
         }
+        .background(Color.wlBase)
     }
 }

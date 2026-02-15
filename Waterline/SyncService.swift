@@ -30,8 +30,8 @@ final class SyncService {
     private let modelContainer: ModelContainer
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "com.waterline.networkMonitor")
-    private var isConnected = false
-    private var syncTask: Task<Void, Never>?
+    private var isSyncing = false
+    private var needsResync = false
 
     init(convexService: ConvexService?, modelContainer: ModelContainer) {
         self.convexService = convexService
@@ -44,17 +44,13 @@ final class SyncService {
         monitor.pathUpdateHandler = { [weak self] path in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                let wasConnected = self.isConnected
-                self.isConnected = path.status == .satisfied
+                let connected = path.status == .satisfied
 
-                if self.isConnected {
+                if connected {
                     if self.status == .offline {
                         self.status = .idle
                     }
-                    // Trigger sync when connectivity is restored
-                    if !wasConnected {
-                        self.triggerSync()
-                    }
+                    self.triggerSync()
                 } else {
                     self.status = .offline
                 }
@@ -62,21 +58,22 @@ final class SyncService {
         }
         monitor.start(queue: monitorQueue)
 
-        // Initial sync attempt
-        triggerSync()
+        // Initial sync after a short delay to let monitor establish
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(500))
+            self?.triggerSync()
+        }
     }
 
     func stop() {
         monitor.cancel()
-        syncTask?.cancel()
-        syncTask = nil
     }
 
     // MARK: - Public
 
     /// Deletes the user's data from Convex. Best-effort; local deletion proceeds regardless.
     func deleteRemoteAccount(appleUserId: String) async {
-        guard let convexService, isConnected else { return }
+        guard let convexService else { return }
         do {
             try await convexService.deleteUser(appleUserId: appleUserId)
         } catch {
@@ -85,10 +82,19 @@ final class SyncService {
     }
 
     /// Call after any local data change to trigger a sync attempt.
+    /// Uses a coalescing pattern: if a sync is already running, it will re-sync
+    /// after the current one finishes instead of cancelling mid-flight.
     func triggerSync() {
         guard convexService != nil else { return }
-        syncTask?.cancel()
-        syncTask = Task { [weak self] in
+
+        if isSyncing {
+            // A sync is running — flag it to re-run when done
+            needsResync = true
+            print("[Sync] Sync in progress — will re-sync when done")
+            return
+        }
+
+        Task { @MainActor [weak self] in
             await self?.performSync()
         }
     }
@@ -97,10 +103,13 @@ final class SyncService {
 
     @MainActor
     private func performSync() async {
-        guard let convexService, isConnected else {
-            if !isConnected { status = .offline }
-            return
-        }
+        guard let convexService else { return }
+        guard !isSyncing else { return }
+
+        isSyncing = true
+        needsResync = false
+        status = .syncing
+        print("[Sync] Starting sync...")
 
         let context = ModelContext(modelContainer)
 
@@ -111,28 +120,45 @@ final class SyncService {
 
         let total = pendingSessions.count + pendingEntries.count + pendingPresets.count
         pendingCount = total
+        print("[Sync] Pending: \(pendingSessions.count) sessions, \(pendingEntries.count) entries, \(pendingPresets.count) presets")
 
         if total == 0 {
+            isSyncing = false
             status = .idle
+            print("[Sync] Nothing to sync")
             return
         }
-
-        status = .syncing
 
         // Find the user's apple ID for Convex calls
         let userDescriptor = FetchDescriptor<User>()
         let users = (try? context.fetch(userDescriptor)) ?? []
-        guard let userId = users.first?.appleUserId else {
+        guard let appleUserId = users.first?.appleUserId else {
+            print("[Sync] ERROR: No user with appleUserId found in local DB")
+            isSyncing = false
             status = .idle
             return
         }
+        print("[Sync] Syncing for appleUserId: \(appleUserId)")
 
-        // Sync sessions first (log entries depend on session IDs)
+        // Ensure user exists in Convex
+        do {
+            let userId = try await convexService.createUser(appleUserId: appleUserId)
+            print("[Sync] Convex user ensured: \(userId)")
+        } catch {
+            print("[Sync] ERROR creating Convex user: \(error)")
+            // If we can't even create the user, network is likely down
+            isSyncing = false
+            status = .error("Network error")
+            scheduleRetry()
+            return
+        }
+
+        // Sync sessions first (log entries depend on sessions existing)
         for session in pendingSessions {
-            guard !Task.isCancelled else { return }
             do {
-                _ = try await convexService.upsertSession(
-                    userId: userId,
+                let sessionId = try await convexService.upsertSession(
+                    appleUserId: appleUserId,
+                    localId: session.id.uuidString,
                     startTime: session.startTime.timeIntervalSince1970 * 1000,
                     endTime: session.endTime.map { $0.timeIntervalSince1970 * 1000 },
                     isActive: session.isActive,
@@ -145,22 +171,25 @@ final class SyncService {
                             pacingAdherence: $0.pacingAdherence,
                             finalWaterlineValue: $0.finalWaterlineValue
                         )
-                    },
-                    existingId: session.id.uuidString
+                    }
                 )
                 session.needsSync = false
+                print("[Sync] Session synced: \(session.id) → \(sessionId)")
             } catch {
-                // Continue with other items — will retry next cycle
+                print("[Sync] ERROR syncing session \(session.id): \(error)")
             }
         }
 
         // Sync log entries
         for entry in pendingEntries {
-            guard !Task.isCancelled else { return }
-            guard let sessionId = entry.session?.id else { continue }
+            guard let session = entry.session else {
+                print("[Sync] SKIP entry \(entry.id) — no session relationship")
+                continue
+            }
             do {
-                _ = try await convexService.addLogEntry(
-                    sessionId: sessionId.uuidString,
+                let entryId = try await convexService.addLogEntry(
+                    appleUserId: appleUserId,
+                    sessionStartTime: session.startTime.timeIntervalSince1970 * 1000,
                     timestamp: entry.timestamp.timeIntervalSince1970 * 1000,
                     type: entry.type.rawValue,
                     alcoholMeta: entry.alcoholMeta.map {
@@ -178,32 +207,38 @@ final class SyncService {
                     source: entry.source.rawValue
                 )
                 entry.needsSync = false
+                print("[Sync] Entry synced: \(entry.type.rawValue) → \(entryId)")
             } catch {
-                // Continue — will retry
+                print("[Sync] ERROR syncing entry \(entry.id): \(error)")
             }
         }
 
         // Sync presets
         for preset in pendingPresets {
-            guard !Task.isCancelled else { return }
             do {
-                _ = try await convexService.upsertDrinkPreset(
-                    userId: userId,
+                let presetId = try await convexService.upsertDrinkPreset(
+                    appleUserId: appleUserId,
                     name: preset.name,
                     drinkType: preset.drinkType.rawValue,
                     sizeOz: preset.sizeOz,
                     abv: preset.abv,
                     standardDrinkEstimate: preset.standardDrinkEstimate,
-                    existingId: preset.id.uuidString
+                    localId: preset.id.uuidString
                 )
                 preset.needsSync = false
+                print("[Sync] Preset synced: \(preset.name) → \(presetId)")
             } catch {
-                // Continue — will retry
+                print("[Sync] ERROR syncing preset \(preset.name): \(error)")
             }
         }
 
         // Save sync state changes
-        try? context.save()
+        do {
+            try context.save()
+            print("[Sync] Context saved successfully")
+        } catch {
+            print("[Sync] ERROR saving context: \(error)")
+        }
 
         // Recount remaining
         let remainingSessions = fetchPendingSessions(context: context).count
@@ -211,7 +246,27 @@ final class SyncService {
         let remainingPresets = fetchPendingPresets(context: context).count
         pendingCount = remainingSessions + remainingEntries + remainingPresets
 
+        isSyncing = false
         status = pendingCount > 0 ? .error("Some items failed to sync") : .idle
+        print("[Sync] Complete. Remaining: \(pendingCount)")
+
+        // If new changes came in while we were syncing, sync again
+        if needsResync {
+            print("[Sync] Re-syncing due to changes during sync...")
+            needsResync = false
+            triggerSync()
+        }
+    }
+
+    // MARK: - Retry
+
+    private func scheduleRetry() {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard let self, !self.isSyncing else { return }
+            print("[Sync] Retrying after delay...")
+            self.triggerSync()
+        }
     }
 
     // MARK: - Fetch Helpers

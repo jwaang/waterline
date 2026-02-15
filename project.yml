@@ -9,9 +9,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    CODE_SIGN_IDENTITY: "-"
-    CODE_SIGNING_REQUIRED: false
-    CODE_SIGNING_ALLOWED: false
+    DEVELOPMENT_TEAM: Q2Z4UJND4C
 
 targets:
   Waterline:
@@ -19,6 +17,11 @@ targets:
     platform: iOS
     sources:
       - path: Waterline
+    entitlements:
+      path: Waterline/Waterline.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.waterline.app.shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app
@@ -26,16 +29,26 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
         INFOPLIST_KEY_NSSupportsLiveActivities: true
+        INFOPLIST_KEY_UILaunchScreen_Generation: true
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIRequiresFullScreen: true
         SWIFT_EMIT_LOC_STRINGS: true
+        CODE_SIGN_STYLE: Automatic
     dependencies:
       - target: WaterlineWidgets
       - target: WaterlineIntents
+      - target: WaterlineWatch
 
   WaterlineWatch:
     type: application
     platform: watchOS
     sources:
       - path: WaterlineWatch
+    entitlements:
+      path: WaterlineWatch/WaterlineWatch.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.waterline.app.shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.waterline.app.watchkitapp
@@ -43,6 +56,9 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: true
         SWIFT_EMIT_LOC_STRINGS: true
+        INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.waterline.app
+        INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp: false
+        CODE_SIGN_STYLE: Automatic
     dependencies: []
 
   WaterlineWidgets:
@@ -59,6 +75,11 @@ targets:
       - path: WaterlineIntents/LogWaterIntent.swift
       - path: WaterlineIntents/StartSessionIntent.swift
       - path: WaterlineIntents/EndSessionIntent.swift
+    entitlements:
+      path: WaterlineWidgets/WaterlineWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.waterline.app.shared
     info:
       path: WaterlineWidgets/Info.plist
       properties:
@@ -83,6 +104,11 @@ targets:
       - path: Waterline/Models.swift
       - path: Waterline/SessionActivityAttributes.swift
       - path: Waterline/WaterlineEngine.swift
+    entitlements:
+      path: WaterlineIntents/WaterlineIntents.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.waterline.app.shared
     info:
       path: WaterlineIntents/Info.plist
       properties:

@@ -2,6 +2,15 @@ import WidgetKit
 import SwiftUI
 import AppIntents
 
+// MARK: - Widget Design Tokens
+
+private extension Color {
+    static let wlWidgetInk = Color.primary
+    static let wlWidgetSecondary = Color.secondary
+    static let wlWidgetWarning = Color(red: 0.75, green: 0.22, blue: 0.17)
+    static let wlWidgetButton = Color.accentColor
+}
+
 // MARK: - Lock Screen: Accessory Circular
 
 struct AccessoryCircularView: View {
@@ -10,19 +19,19 @@ struct AccessoryCircularView: View {
     var body: some View {
         if entry.hasActiveSession {
             Gauge(value: clampedFraction, in: 0...1) {
-                Image(systemName: "drop.fill")
+                Text("WL")
             } currentValueLabel: {
                 Text(String(format: "%.0f", entry.waterlineValue))
-                    .font(.system(.body, design: .rounded).bold())
+                    .font(.system(.body, design: .monospaced).bold())
             }
             .gaugeStyle(.accessoryCircular)
-            .tint(entry.isWarning ? .red : .blue)
+            .tint(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
         } else {
             ZStack {
                 AccessoryWidgetBackground()
                 VStack(spacing: 2) {
-                    Image(systemName: "drop")
-                        .font(.caption)
+                    Text("WL")
+                        .font(.system(size: 10, weight: .bold))
                     Text("—")
                         .font(.caption2)
                 }
@@ -44,29 +53,25 @@ struct AccessoryRectangularView: View {
     var body: some View {
         if entry.hasActiveSession {
             HStack(spacing: 8) {
-                // Mini waterline gauge
                 Gauge(value: clampedFraction, in: 0...1) {
                     EmptyView()
                 }
                 .gaugeStyle(.accessoryLinear)
-                .tint(entry.isWarning ? .red : .blue)
+                .tint(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
                 .frame(width: 40)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("WL \(String(format: "%.1f", entry.waterlineValue))")
-                        .font(.headline)
+                        .font(.system(.headline, design: .monospaced))
                         .widgetAccentable()
-                    HStack(spacing: 6) {
-                        Label("\(entry.drinkCount)", systemImage: "wineglass")
-                        Label("\(entry.waterCount)", systemImage: "drop.fill")
-                    }
-                    .font(.caption)
+                    Text("\(entry.drinkCount)D  \(entry.waterCount)W")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
                 }
             }
         } else {
             HStack(spacing: 6) {
-                Image(systemName: "drop")
-                    .font(.title3)
+                Text("WL")
+                    .font(.system(.title3, design: .monospaced).bold())
                 Text("No Session")
                     .font(.headline)
             }
@@ -86,13 +91,9 @@ struct AccessoryInlineView: View {
 
     var body: some View {
         if entry.hasActiveSession {
-            Label {
-                Text("WL \(String(format: "%.1f", entry.waterlineValue)) | \(entry.drinkCount)D \(entry.waterCount)W")
-            } icon: {
-                Image(systemName: "drop.fill")
-            }
+            Text("WL \(String(format: "%.1f", entry.waterlineValue)) | \(entry.drinkCount)D \(entry.waterCount)W")
         } else {
-            Label("No Session", systemImage: "drop")
+            Text("WL — No Session")
         }
     }
 }
@@ -106,42 +107,52 @@ struct SystemSmallView: View {
         if entry.hasActiveSession {
             VStack(spacing: 8) {
                 HStack {
-                    Image(systemName: "drop.fill")
-                        .foregroundStyle(entry.isWarning ? .red : .blue)
+                    Text("WL")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                     Spacer()
                     Text(String(format: "%.1f", entry.waterlineValue))
-                        .font(.title2.bold().monospacedDigit())
-                        .foregroundStyle(entry.isWarning ? .red : .primary)
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
                 }
 
                 Spacer()
 
                 HStack(spacing: 12) {
-                    Label("\(entry.drinkCount)", systemImage: "wineglass")
-                        .font(.caption.weight(.medium))
-                    Label("\(entry.waterCount)", systemImage: "drop.fill")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.blue)
+                    VStack(spacing: 2) {
+                        Text("\(entry.drinkCount)")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        Text("DRINKS")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
+                    }
+                    VStack(spacing: 2) {
+                        Text("\(entry.waterCount)")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        Text("WATER")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
+                    }
                 }
 
                 Spacer()
 
                 HStack(spacing: 8) {
                     Button(intent: LogDrinkIntent()) {
-                        Label("Drink", systemImage: "plus")
-                            .font(.caption2.weight(.semibold))
+                        Text("+ Drink")
+                            .font(.system(size: 11, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(Color.wlWidgetButton)
 
                     Button(intent: LogWaterIntent()) {
-                        Label("Water", systemImage: "plus")
-                            .font(.caption2.weight(.semibold))
+                        Text("+ Water")
+                            .font(.system(size: 11, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .buttonStyle(.bordered)
+                    .tint(Color.wlWidgetButton)
                 }
             }
             .containerBackground(.fill.tertiary, for: .widget)
@@ -153,25 +164,24 @@ struct SystemSmallView: View {
     private var smallNoSessionView: some View {
         VStack(spacing: 6) {
             if let last = entry.lastSession {
-                Text("Last Session")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                Text("LAST SESSION")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.wlWidgetSecondary)
                 Text(last.date, style: .date)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.wlWidgetSecondary)
                 HStack(spacing: 8) {
-                    Label("\(last.drinkCount)", systemImage: "wineglass")
-                    Label("\(last.waterCount)", systemImage: "drop.fill")
-                        .foregroundStyle(.blue)
+                    Text("\(last.drinkCount)D")
+                    Text("\(last.waterCount)W")
                 }
-                .font(.caption.weight(.medium))
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
             } else {
-                Image(systemName: "drop")
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-                Text("No Session")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("WL")
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.wlWidgetSecondary)
+                Text("NO SESSION")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(Color.wlWidgetSecondary)
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
@@ -186,65 +196,68 @@ struct SystemMediumView: View {
     var body: some View {
         if entry.hasActiveSession {
             HStack(spacing: 16) {
-                // Left side: Waterline gauge
+                // Left side: Waterline value
                 VStack(spacing: 6) {
                     ZStack {
-                        Circle()
-                            .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 4)
-                        Circle()
-                            .trim(from: 0, to: clampedFraction)
-                            .stroke(entry.isWarning ? Color.red : Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                        Text(String(format: "%.1f", entry.waterlineValue))
-                            .font(.system(.title3, design: .rounded).bold().monospacedDigit())
-                            .foregroundStyle(entry.isWarning ? .red : .primary)
-                    }
-                    .frame(width: 56, height: 56)
+                        Rectangle()
+                            .strokeBorder(Color.wlWidgetSecondary.opacity(0.2), lineWidth: 2)
+                            .frame(width: 56, height: 56)
 
-                    Text("Waterline")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        Text(String(format: "%.1f", entry.waterlineValue))
+                            .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            .foregroundStyle(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
+                    }
+
+                    Text("WL")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                 }
 
-                // Right side: counts + reminder + buttons
+                // Right side
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 16) {
-                        Label("\(entry.drinkCount)", systemImage: "wineglass")
-                            .font(.subheadline.weight(.medium))
-                        Label("\(entry.waterCount)", systemImage: "drop.fill")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.blue)
+                        VStack(spacing: 2) {
+                            Text("\(entry.drinkCount)")
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            Text("DRINKS")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color.wlWidgetSecondary)
+                        }
+                        VStack(spacing: 2) {
+                            Text("\(entry.waterCount)")
+                                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                            Text("WATER")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color.wlWidgetSecondary)
+                        }
                     }
 
                     if let reminder = entry.nextReminderText {
-                        Label("Next: \(reminder)", systemImage: "bell")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text("NEXT: \(reminder.uppercased())")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
                     } else if let startTime = entry.sessionStartTime {
-                        HStack(spacing: 4) {
-                            Image(systemName: "clock")
-                            Text(startTime, style: .relative)
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        Text(startTime, style: .relative)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
                     }
 
                     HStack(spacing: 8) {
                         Button(intent: LogDrinkIntent()) {
-                            Label("Drink", systemImage: "plus")
-                                .font(.caption.weight(.semibold))
+                            Text("+ Drink")
+                                .font(.system(size: 12, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.orange)
+                        .tint(Color.wlWidgetButton)
 
                         Button(intent: LogWaterIntent()) {
-                            Label("Water", systemImage: "plus")
-                                .font(.caption.weight(.semibold))
+                            Text("+ Water")
+                                .font(.system(size: 12, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.blue)
+                        .buttonStyle(.bordered)
+                        .tint(Color.wlWidgetButton)
                     }
                 }
             }
@@ -256,31 +269,28 @@ struct SystemMediumView: View {
 
     private var mediumNoSessionView: some View {
         HStack(spacing: 16) {
-            Image(systemName: "drop")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
+            Text("WL")
+                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.wlWidgetSecondary)
 
             if let last = entry.lastSession {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Last Session")
-                        .font(.subheadline.weight(.semibold))
+                    Text("LAST SESSION")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                     Text(last.date, style: .date)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        Label("\(last.drinkCount) drinks", systemImage: "wineglass")
-                        Label("\(last.waterCount) water", systemImage: "drop.fill")
-                            .foregroundStyle(.blue)
-                    }
-                    .font(.caption)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.wlWidgetSecondary)
+                    Text("\(last.drinkCount)D  \(last.waterCount)W")
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
                 }
             } else {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Waterline")
-                        .font(.subheadline.weight(.semibold))
-                    Text("Start a session to track your pacing")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("WATERLINE")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("START A SESSION TO TRACK")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                 }
             }
 
@@ -303,39 +313,54 @@ struct SystemLargeView: View {
     var body: some View {
         if entry.hasActiveSession {
             VStack(spacing: 12) {
-                // Top row: waterline value + counts
+                // Top row
                 HStack {
-                    HStack(spacing: 8) {
-                        Image(systemName: "drop.fill")
-                            .foregroundStyle(entry.isWarning ? .red : .blue)
-                            .font(.title3)
-                        Text(String(format: "%.1f", entry.waterlineValue))
-                            .font(.system(.title, design: .rounded).bold().monospacedDigit())
-                            .foregroundStyle(entry.isWarning ? .red : .primary)
-                    }
+                    Text("WL")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                     Spacer()
-                    HStack(spacing: 16) {
-                        Label("\(entry.drinkCount)", systemImage: "wineglass")
-                            .font(.subheadline.weight(.medium))
-                        Label("\(entry.waterCount)", systemImage: "drop.fill")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.blue)
-                    }
+                    Text(String(format: "%.1f", entry.waterlineValue))
+                        .font(.system(size: 32, weight: .bold, design: .monospaced))
+                        .foregroundStyle(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
                 }
 
-                // Waterline linear gauge
-                Gauge(value: clampedFraction, in: 0...1) {
-                    EmptyView()
+                // Linear gauge
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color.wlWidgetSecondary.opacity(0.15))
+                        Rectangle()
+                            .fill(entry.isWarning ? Color.wlWidgetWarning : Color.wlWidgetInk)
+                            .frame(width: geo.size.width * clampedFraction)
+                    }
                 }
-                .gaugeStyle(.linearCapacity)
-                .tint(entry.isWarning ? .red : .blue)
+                .frame(height: 6)
+
+                // Counts
+                HStack(spacing: 16) {
+                    VStack(spacing: 2) {
+                        Text("\(entry.drinkCount)")
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        Text("DRINKS")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
+                    }
+                    VStack(spacing: 2) {
+                        Text("\(entry.waterCount)")
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                        Text("WATER")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
+                    }
+                    Spacer()
+                }
 
                 // Next reminder
                 if let reminder = entry.nextReminderText {
                     HStack {
-                        Label("Next reminder: \(reminder)", systemImage: "bell")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Text("NEXT REMINDER: \(reminder.uppercased())")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(Color.wlWidgetSecondary)
                         Spacer()
                     }
                 }
@@ -345,24 +370,25 @@ struct SystemLargeView: View {
                     VStack(spacing: 0) {
                         ForEach(entry.recentEntries) { log in
                             HStack {
-                                Image(systemName: log.isAlcohol ? "wineglass" : "drop.fill")
-                                    .foregroundStyle(log.isAlcohol ? .orange : .blue)
-                                    .font(.caption)
-                                    .frame(width: 20)
+                                Text(log.isAlcohol ? "ALC" : "H2O")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundStyle(log.isAlcohol ? Color.wlWidgetInk : Color.wlWidgetSecondary)
+                                    .frame(width: 28, alignment: .leading)
                                 Text(log.label)
-                                    .font(.caption)
+                                    .font(.system(size: 12))
                                 Spacer()
                                 Text(log.timestamp, style: .time)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(Color.wlWidgetSecondary)
                             }
                             .padding(.vertical, 4)
                             if log.id != entry.recentEntries.last?.id {
-                                Divider()
+                                Rectangle()
+                                    .fill(Color.wlWidgetSecondary.opacity(0.15))
+                                    .frame(height: 1)
                             }
                         }
                     }
-                    .padding(.horizontal, 4)
                 }
 
                 Spacer()
@@ -370,20 +396,20 @@ struct SystemLargeView: View {
                 // Quick-add buttons
                 HStack(spacing: 8) {
                     Button(intent: LogDrinkIntent()) {
-                        Label("Log Drink", systemImage: "plus")
-                            .font(.subheadline.weight(.semibold))
+                        Text("+ Drink")
+                            .font(.system(size: 14, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(Color.wlWidgetButton)
 
                     Button(intent: LogWaterIntent()) {
-                        Label("Log Water", systemImage: "plus")
-                            .font(.subheadline.weight(.semibold))
+                        Text("+ Water")
+                            .font(.system(size: 14, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .buttonStyle(.bordered)
+                    .tint(Color.wlWidgetButton)
                 }
             }
             .containerBackground(.fill.tertiary, for: .widget)
@@ -396,55 +422,52 @@ struct SystemLargeView: View {
         VStack(spacing: 16) {
             Spacer()
 
-            Image(systemName: "drop")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
+            Text("WATERLINE")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundStyle(Color.wlWidgetSecondary)
 
             if let last = entry.lastSession {
                 VStack(spacing: 8) {
-                    Text("Last Session")
-                        .font(.headline)
+                    Text("LAST SESSION")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                     Text(last.date, style: .date)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.wlWidgetSecondary)
 
                     HStack(spacing: 20) {
-                        VStack {
+                        VStack(spacing: 2) {
                             Text("\(last.drinkCount)")
-                                .font(.title2.bold().monospacedDigit())
-                            Text("Drinks")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            Text("DRINKS")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color.wlWidgetSecondary)
                         }
-                        VStack {
+                        VStack(spacing: 2) {
                             Text("\(last.waterCount)")
-                                .font(.title2.bold().monospacedDigit())
-                                .foregroundStyle(.blue)
-                            Text("Water")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                            Text("WATER")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color.wlWidgetSecondary)
                         }
-                        VStack {
+                        VStack(spacing: 2) {
                             Text(String(format: "%.1f", last.finalWaterline))
-                                .font(.title2.bold().monospacedDigit())
-                                .foregroundStyle(last.finalWaterline >= 2 ? .red : .primary)
-                            Text("Final WL")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 22, weight: .bold, design: .monospaced))
+                                .foregroundStyle(last.finalWaterline >= 2 ? Color.wlWidgetWarning : Color.wlWidgetInk)
+                            Text("FINAL WL")
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(Color.wlWidgetSecondary)
                         }
                     }
 
                     Text(formatDuration(last.duration))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.wlWidgetSecondary)
                 }
             } else {
-                Text("Waterline")
-                    .font(.headline)
-                Text("Start a session to begin tracking your pacing")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                Text("START A SESSION TO BEGIN TRACKING")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.wlWidgetSecondary)
             }
 
             Spacer()
@@ -461,9 +484,9 @@ struct SystemLargeView: View {
         let hours = Int(seconds) / 3600
         let minutes = (Int(seconds) % 3600) / 60
         if hours > 0 {
-            return "\(hours)h \(minutes)m"
+            return "\(hours)H \(minutes)M"
         }
-        return "\(minutes)m"
+        return "\(minutes)M"
     }
 }
 

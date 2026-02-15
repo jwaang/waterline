@@ -12,41 +12,64 @@ struct PresetsListView: View {
     private var user: User? { users.first }
 
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                WLSectionHeader(title: "QUICK DRINKS")
+
                 if presets.isEmpty {
-                    Text("No presets yet. Add one to log drinks with a single tap.")
-                        .foregroundStyle(.secondary)
-                        .font(.subheadline)
+                    VStack(spacing: 8) {
+                        Text("NO PRESETS CONFIGURED")
+                            .wlTechnical()
+                        Text("Add one to log drinks with a single tap.")
+                            .font(.wlBody)
+                            .foregroundStyle(Color.wlSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
                 } else {
                     ForEach(presets) { preset in
                         presetRow(preset)
+
+                        if preset.id != presets.last?.id {
+                            WLRule()
+                                .padding(.leading, WLSpacing.screenMargin)
+                        }
                     }
-                    .onDelete(perform: deletePresets)
                 }
-            } header: {
-                Text("Quick Drinks")
-            } footer: {
-                Text("Presets appear on the active session screen for single-tap logging.")
+
+                Text("PRESETS APPEAR ON THE ACTIVE SESSION SCREEN")
+                    .wlTechnical()
+                    .foregroundStyle(Color.wlSecondary)
+                    .padding(.horizontal, WLSpacing.screenMargin)
+                    .padding(.vertical, 12)
             }
         }
-        .navigationTitle("Presets")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.wlBase)
+        .wlScreen()
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("PRESETS")
+                    .font(.wlHeadline)
+                    .foregroundStyle(Color.wlInk)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     showingAddSheet = true
                 } label: {
-                    Image(systemName: "plus")
+                    Text("+")
+                        .font(.wlControl)
+                        .foregroundStyle(Color.wlInk)
                 }
                 .accessibilityLabel("Add Preset")
             }
         }
         .sheet(isPresented: $showingAddSheet) {
             AddEditPresetView(existingPreset: nil, user: user)
+                .presentationCornerRadius(0)
         }
         .sheet(item: $presetToEdit) { preset in
             AddEditPresetView(existingPreset: preset, user: user)
+                .presentationCornerRadius(0)
         }
     }
 
@@ -55,24 +78,27 @@ struct PresetsListView: View {
             presetToEdit = preset
         } label: {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(preset.name)
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(.primary)
+                        .font(.wlBody)
+                        .foregroundStyle(Color.wlInk)
                     HStack(spacing: 8) {
-                        Text(preset.drinkType.displayName)
-                        Text("\(preset.sizeOz, specifier: "%.0f") oz")
-                        Text("\(preset.standardDrinkEstimate, specifier: "%.1f") std")
+                        Text(preset.drinkType.displayName.uppercased())
+                        Text("\(preset.sizeOz, specifier: "%.0f") OZ")
+                        Text("\(preset.standardDrinkEstimate, specifier: "%.1f") STD")
                     }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.wlTechnicalMono)
+                    .foregroundStyle(Color.wlSecondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Text(">>")
+                    .font(.wlTechnicalMono)
+                    .foregroundStyle(Color.wlTertiary)
             }
+            .padding(.horizontal, WLSpacing.screenMargin)
+            .padding(.vertical, 12)
         }
+        .buttonStyle(.plain)
     }
 
     private func deletePresets(at offsets: IndexSet) {

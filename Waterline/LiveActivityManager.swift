@@ -10,12 +10,13 @@ enum LiveActivityManager {
     // MARK: - Start
 
     /// Starts a Live Activity for the given session. No-op if ActivityKit is unavailable.
-    static func startActivity(sessionId: UUID, startTime: Date) {
+    static func startActivity(sessionId: UUID, startTime: Date, warningThreshold: Int = 2) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
 
         let attributes = SessionActivityAttributes(
             sessionId: sessionId.uuidString,
-            startTime: startTime
+            startTime: startTime,
+            warningThreshold: warningThreshold
         )
         let initialState = SessionActivityAttributes.ContentState(
             waterlineValue: 0,
@@ -79,7 +80,7 @@ enum LiveActivityManager {
 
         for activity in Activity<SessionActivityAttributes>.activities {
             Task {
-                await activity.end(content, dismissalPolicy: .default)
+                await activity.end(content, dismissalPolicy: .immediate)
             }
         }
     }

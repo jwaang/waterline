@@ -3,13 +3,19 @@ import { v } from "convex/values";
 
 export const getActiveSession = query({
   args: {
-    userId: v.id("users"),
+    appleUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+    if (!user) return null;
+
     return await ctx.db
       .query("sessions")
       .withIndex("by_userId_isActive", (q) =>
-        q.eq("userId", args.userId).eq("isActive", true)
+        q.eq("userId", user._id).eq("isActive", true)
       )
       .unique();
   },
@@ -31,12 +37,18 @@ export const getSessionLogs = query({
 
 export const getUserPresets = query({
   args: {
-    userId: v.id("users"),
+    appleUserId: v.string(),
   },
   handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+    if (!user) return [];
+
     return await ctx.db
       .query("drinkPresets")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .collect();
   },
 });

@@ -29,72 +29,131 @@ struct SessionSummaryView: View {
             if let session {
                 sessionContent(session)
             } else {
-                ContentUnavailableView("Session Not Found", systemImage: "exclamationmark.triangle")
+                ZStack {
+                    Color.wlBase.ignoresSafeArea()
+                    VStack(spacing: 8) {
+                        Text("ERROR")
+                            .wlTechnical()
+                            .foregroundStyle(Color.wlWarning)
+                        Text("Session not found")
+                            .font(.wlBody)
+                            .foregroundStyle(Color.wlSecondary)
+                    }
+                }
             }
         }
-        .navigationTitle("Session Summary")
-        .navigationBarTitleDisplayMode(.inline)
+        .wlScreen()
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("SESSION SUMMARY")
+                    .font(.wlHeadline)
+                    .foregroundStyle(Color.wlInk)
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Done") {
                     dismiss()
                 }
+                .font(.wlControl)
+                .foregroundStyle(Color.wlInk)
             }
         }
     }
 
     @ViewBuilder
     private func sessionContent(_ session: Session) -> some View {
-        List {
-            overviewSection(for: session)
-            timelineSection(for: session)
+        ScrollView {
+            VStack(spacing: 0) {
+                overviewSection(for: session)
+                timelineSection(for: session)
+            }
+            .padding(.vertical, 8)
         }
+        .background(Color.wlBase)
         .sheet(item: $entryToEdit, onDismiss: {
-            // Recompute summary when edit sheet dismisses
             if let session = self.session {
                 recomputeSummary(for: session)
             }
         }) { entry in
             EditLogEntryView(entry: entry)
+                .presentationCornerRadius(0)
         }
     }
 
     // MARK: - Overview
 
     private func overviewSection(for session: Session) -> some View {
-        Section("Overview") {
-            LabeledContent("Date", value: session.startTime, format: .dateTime.month().day().year())
-            LabeledContent("Duration", value: durationText(for: session))
-            LabeledContent("Drinks", value: "\(drinkCount(for: session))")
-            LabeledContent("Standard Drinks", value: String(format: "%.1f", totalStandardDrinks(for: session)))
-            LabeledContent("Water", value: "\(waterCount(for: session)) (\(totalWaterVolume(for: session)) oz)")
+        VStack(spacing: 0) {
+            WLSectionHeader(title: "OVERVIEW")
 
-            LabeledContent("Pacing Adherence", value: String(format: "%.0f%%", computePacingAdherence(for: session) * 100))
-            LabeledContent("Final Waterline", value: String(format: "%.1f", waterlineValue(for: session)))
+            // Metrics grid
+            HStack(spacing: 16) {
+                WLGridCell(value: "\(drinkCount(for: session))", label: "DRINKS")
+                WLGridCell(value: "\(waterCount(for: session))", label: "WATER")
+            }
+            .padding(.horizontal, WLSpacing.screenMargin)
+            .padding(.vertical, 12)
+
+            HStack(spacing: 16) {
+                WLGridCell(value: String(format: "%.1f", totalStandardDrinks(for: session)), label: "STD DRINKS")
+                WLGridCell(value: String(format: "%.1f", waterlineValue(for: session)), label: "FINAL WL")
+            }
+            .padding(.horizontal, WLSpacing.screenMargin)
+            .padding(.bottom, 12)
+
+            // Detail rows
+            VStack(spacing: 0) {
+                summaryRow(label: "DATE", value: session.startTime.formatted(.dateTime.month().day().year()))
+                WLRule()
+                summaryRow(label: "DURATION", value: durationText(for: session))
+                WLRule()
+                summaryRow(label: "WATER VOLUME", value: "\(totalWaterVolume(for: session)) OZ")
+                WLRule()
+                summaryRow(label: "PACING", value: String(format: "%.0f%%", computePacingAdherence(for: session) * 100))
+            }
+            .padding(.horizontal, WLSpacing.screenMargin)
+            .padding(.bottom, 16)
         }
+    }
+
+    private func summaryRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .wlTechnical()
+            Spacer()
+            Text(value)
+                .font(.wlTechnicalMono)
+                .foregroundStyle(Color.wlInk)
+        }
+        .padding(.vertical, 10)
     }
 
     // MARK: - Timeline
 
     private func timelineSection(for session: Session) -> some View {
         let sorted = session.logEntries.sorted(by: { $0.timestamp < $1.timestamp })
-        return Section("Timeline") {
+        return VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "TIMELINE")
+
             if sorted.isEmpty {
-                Text("No entries")
-                    .foregroundStyle(.secondary)
+                Text("NO ENTRIES")
+                    .wlTechnical()
+                    .padding(.horizontal, WLSpacing.screenMargin)
+                    .padding(.vertical, 16)
             } else {
                 ForEach(sorted) { entry in
                     LogEntryRow(entry: entry)
+                        .padding(.horizontal, WLSpacing.screenMargin)
+                        .padding(.vertical, 8)
                         .contentShape(Rectangle())
                         .onTapGesture {
                             if allowsEditing {
                                 entryToEdit = entry
                             }
                         }
-                }
-                .onDelete { offsets in
-                    if allowsEditing {
-                        deleteEntries(offsets, from: sorted, session: session)
+
+                    if entry.id != sorted.last?.id {
+                        WLRule()
+                            .padding(.leading, WLSpacing.screenMargin)
                     }
                 }
             }
@@ -107,8 +166,6 @@ struct SessionSummaryView: View {
             modelContext.delete(entry)
         }
         try? modelContext.save()
-
-        // Recompute summary after delete
         recomputeSummary(for: session)
     }
 
@@ -159,12 +216,12 @@ struct SessionSummaryView: View {
         if let summary = session.computedSummary {
             let hours = Int(summary.durationSeconds) / 3600
             let minutes = (Int(summary.durationSeconds) % 3600) / 60
-            return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+            return hours > 0 ? "\(hours)H \(minutes)M" : "\(minutes)M"
         }
         guard let endTime = session.endTime else { return "—" }
         let seconds = endTime.timeIntervalSince(session.startTime)
         let hours = Int(seconds) / 3600
         let minutes = (Int(seconds) % 3600) / 60
-        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+        return hours > 0 ? "\(hours)H \(minutes)M" : "\(minutes)M"
     }
 }

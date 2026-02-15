@@ -9,7 +9,7 @@ struct EndSessionIntent: AppIntent {
     static let openAppWhenRun: Bool = false
 
     func perform() async throws -> some IntentResult {
-        let container = try ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self)
+        let container = try SharedModelContainer.create()
         let context = ModelContext(container)
 
         let descriptor = FetchDescriptor<Session>(

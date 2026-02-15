@@ -1,29 +1,50 @@
 import ActivityKit
 import SwiftUI
 import SwiftData
+import UIKit
 import UserNotifications
 import WidgetKit
 
+extension Notification.Name {
+    static let watchDidModifySession = Notification.Name("watchDidModifySession")
+    static let phoneSessionDidChange = Notification.Name("phoneSessionDidChange")
+}
+
 @main
 struct WaterlineApp: App {
-    @State private var authManager = AuthenticationManager()
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var authManager = AuthenticationManager(
+        convexService: ConvexService(deploymentURL: URL(string: "https://resilient-mongoose-358.convex.cloud")!)
+    )
     @State private var syncService: SyncService
     private let notificationDelegate = NotificationDelegate()
     private let watchConnectivityManager = WatchConnectivityManager()
     private let sharedModelContainer: ModelContainer
 
     init() {
+        // Configure navigation bar appearance for Swiss-modernist design
+        let navAppearance = UINavigationBarAppearance()
+        navAppearance.configureWithOpaqueBackground()
+        navAppearance.backgroundColor = UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(red: 0.067, green: 0.067, blue: 0.067, alpha: 1) : UIColor(red: 0.941, green: 0.933, blue: 0.918, alpha: 1)
+        }
+        navAppearance.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = navAppearance
+        UINavigationBar.appearance().compactAppearance = navAppearance
+        UINavigationBar.appearance().scrollEdgeAppearance = navAppearance
+
         // Create a shared model container
         let container: ModelContainer
         do {
-            container = try ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self)
+            container = try SharedModelContainer.create()
         } catch {
             fatalError("Failed to create model container: \(error)")
         }
         self.sharedModelContainer = container
 
-        // Create sync service (ConvexService is nil until deployment URL is configured)
-        _syncService = State(initialValue: SyncService(convexService: nil, modelContainer: container))
+        // Create Convex service and sync service
+        let convex = ConvexService(deploymentURL: URL(string: "https://resilient-mongoose-358.convex.cloud")!)
+        _syncService = State(initialValue: SyncService(convexService: convex, modelContainer: container))
 
         // Register notification categories (time reminders, per-drink reminders)
         ReminderService.registerCategory()
@@ -55,18 +76,41 @@ struct WaterlineApp: App {
         watchManager.onWatchEndSession = {
             WaterlineApp.handleWatchEndSession(container: containerRef, watchManager: watchManager)
         }
+
+        // Observe Live Activity updates from widget extension intents (cross-process IPC)
+        LiveActivityBridge.startObserving {
+            Task { @MainActor in
+                guard let state = LiveActivityBridge.readPendingState() else { return }
+                LiveActivityManager.updateActivity(
+                    waterlineValue: state.waterlineValue,
+                    drinkCount: state.drinkCount,
+                    waterCount: state.waterCount,
+                    isWarning: state.isWarning
+                )
+                NotificationCenter.default.post(name: .phoneSessionDidChange, object: nil)
+            }
+        }
     }
 
     var body: some Scene {
         WindowGroup {
             RootView(authManager: authManager, syncService: syncService)
                 .onAppear {
-                    authManager.restoreSession()
+                    authManager.restoreSession(modelContext: sharedModelContainer.mainContext)
                     syncService.start()
                     // Set watch manager on ReminderService for forwarding reminders
                     ReminderService.watchManager = watchConnectivityManager
                     // Send initial session state and presets to watch
                     WaterlineApp.sendWatchUpdate(container: sharedModelContainer, watchManager: watchConnectivityManager)
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .phoneSessionDidChange)) { _ in
+                    WaterlineApp.sendWatchUpdate(container: sharedModelContainer, watchManager: watchConnectivityManager)
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        WaterlineApp.refreshLiveActivityFromDB(container: sharedModelContainer)
+                        WaterlineApp.sendWatchUpdate(container: sharedModelContainer, watchManager: watchConnectivityManager)
+                    }
                 }
         }
         .modelContainer(sharedModelContainer)
@@ -190,7 +234,7 @@ struct WaterlineApp: App {
         }
 
         WidgetCenter.shared.reloadTimelines(ofKind: "WaterlineWidgets")
-        LiveActivityManager.startActivity(sessionId: session.id, startTime: session.startTime)
+        LiveActivityManager.startActivity(sessionId: session.id, startTime: session.startTime, warningThreshold: settings.warningThreshold)
         sendWatchUpdate(container: container, watchManager: watchManager)
     }
 
@@ -246,6 +290,9 @@ struct WaterlineApp: App {
 
         // Send updated state to watch (isActive will now be false)
         sendWatchUpdate(container: container, watchManager: watchManager)
+
+        // Notify HomeView that session state changed (SwiftData doesn't detect property-only mutations)
+        NotificationCenter.default.post(name: .watchDidModifySession, object: nil)
     }
 
     // MARK: - Watch State Sync
@@ -288,6 +335,14 @@ struct WaterlineApp: App {
     }
 
     // MARK: - Live Activity Helper
+
+    @MainActor
+    private static func refreshLiveActivityFromDB(container: ModelContainer) {
+        let context = container.mainContext
+        let descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.isActive })
+        guard let session = try? context.fetch(descriptor).first else { return }
+        updateLiveActivityFromSession(session)
+    }
 
     private static func updateLiveActivityFromSession(_ session: Session, warningThreshold: Int = 2) {
         let state = WaterlineEngine.computeState(from: session.logEntries, warningThreshold: warningThreshold)

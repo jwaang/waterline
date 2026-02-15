@@ -91,7 +91,7 @@ struct WaterlineTimelineProvider: TimelineProvider {
     }
 
     private func fetchCurrentEntry() -> WaterlineTimelineEntry {
-        guard let container = try? ModelContainer(for: User.self, Session.self, LogEntry.self, DrinkPreset.self) else {
+        guard let container = try? SharedModelContainer.create() else {
             return .noSession
         }
         let context = ModelContext(container)

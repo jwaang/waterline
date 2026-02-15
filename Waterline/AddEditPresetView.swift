@@ -18,72 +18,92 @@ struct AddEditPresetView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Name") {
-                    TextField("e.g. My IPA", text: $name)
-                }
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Name
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("NAME")
+                            .wlTechnical()
+                        TextField("e.g. My IPA", text: $name)
+                            .font(.wlBody)
+                            .foregroundStyle(Color.wlInk)
+                            .padding(.vertical, 10)
+                            .overlay(alignment: .bottom) {
+                                WLRule()
+                            }
+                    }
 
-                Section("Type") {
-                    Picker("Drink Type", selection: $drinkType) {
-                        ForEach(DrinkType.allCases, id: \.self) { type in
-                            Text(type.displayName).tag(type)
+                    // Type
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TYPE")
+                            .wlTechnical()
+                        WLSegmentedPicker(
+                            options: DrinkType.allCases.map { ($0.displayName.uppercased(), $0) },
+                            selection: $drinkType
+                        )
+                    }
+
+                    // Size
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("SIZE (OZ)")
+                            .wlTechnical()
+                        HStack {
+                            TextField("oz", value: $sizeOz, format: .number)
+                                .font(.wlNumeral)
+                                .foregroundStyle(Color.wlInk)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .overlay(
+                                    Rectangle()
+                                        .strokeBorder(Color.wlTertiary, lineWidth: 1)
+                                )
                         }
                     }
-                    .pickerStyle(.segmented)
-                }
 
-                Section("Size") {
-                    HStack {
-                        Text("Size (oz)")
-                        Spacer()
-                        TextField("oz", value: $sizeOz, format: .number)
+                    // ABV
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ABV (OPTIONAL)")
+                            .wlTechnical()
+                        TextField("e.g. 5.0", text: $abv)
+                            .font(.wlBody)
+                            .foregroundStyle(Color.wlInk)
                             .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 80)
+                            .padding(.vertical, 10)
+                            .overlay(alignment: .bottom) {
+                                WLRule()
+                            }
                     }
-                }
 
-                Section("ABV (optional)") {
-                    TextField("e.g. 5.0", text: $abv)
-                        .keyboardType(.decimalPad)
-                }
+                    // Standard Drink Estimate
+                    WLDoubleStepper(
+                        label: "STANDARD DRINK ESTIMATE",
+                        value: $standardDrinkEstimate,
+                        range: 0.5...5.0,
+                        step: 0.5
+                    )
 
-                Section("Standard Drink Estimate") {
-                    HStack(spacing: 16) {
-                        Button {
-                            standardDrinkEstimate = max(0.5, standardDrinkEstimate - 0.5)
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
+                    Spacer()
 
-                        Text("\(standardDrinkEstimate, specifier: "%.1f")")
-                            .font(.title2.weight(.bold).monospacedDigit())
-                            .frame(minWidth: 60)
-
-                        Button {
-                            standardDrinkEstimate = min(5.0, standardDrinkEstimate + 0.5)
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
+                    WLActionBlock(label: "Save") {
+                        savePreset()
                     }
-                    .frame(maxWidth: .infinity)
+                    .opacity(name.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1.0)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
+                .padding(24)
             }
-            .navigationTitle(isEditing ? "Edit Preset" : "Add Preset")
-            .navigationBarTitleDisplayMode(.inline)
+            .background(Color.wlBase)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text(isEditing ? "EDIT PRESET" : "ADD PRESET")
+                        .font(.wlHeadline)
+                        .foregroundStyle(Color.wlInk)
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { savePreset() }
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .foregroundStyle(Color.wlSecondary)
                 }
             }
             .onAppear {

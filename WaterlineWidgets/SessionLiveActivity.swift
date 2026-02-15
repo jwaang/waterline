@@ -2,14 +2,21 @@ import ActivityKit
 import SwiftUI
 import WidgetKit
 
+// MARK: - Live Activity Design Tokens
+
+private extension Color {
+    static let wlLAInk = Color.white
+    static let wlLASecondary = Color.secondary
+    static let wlLAWarning = Color(red: 0.75, green: 0.22, blue: 0.17)
+    static let wlLAButton = Color(white: 0.45)
+}
+
 struct SessionLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: SessionActivityAttributes.self) { context in
-            // Lock Screen / notification banner Live Activity view
             lockScreenView(context: context)
         } dynamicIsland: { context in
             DynamicIsland {
-                // Expanded view
                 DynamicIslandExpandedRegion(.leading) {
                     expandedLeading(context: context)
                 }
@@ -23,19 +30,17 @@ struct SessionLiveActivity: Widget {
                     expandedBottom()
                 }
             } compactLeading: {
-                // Compact: left side of Dynamic Island
-                Image(systemName: "drop.fill")
-                    .foregroundStyle(context.state.isWarning ? .red : .blue)
-                    .font(.caption)
+                Text("WL")
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(context.state.isWarning ? Color.wlLAWarning : Color.wlLAInk)
             } compactTrailing: {
-                // Compact: right side of Dynamic Island
                 Text(String(format: "%.1f", context.state.waterlineValue))
                     .font(.caption.monospacedDigit().bold())
-                    .foregroundStyle(context.state.isWarning ? .red : .primary)
+                    .foregroundStyle(context.state.isWarning ? Color.wlLAWarning : Color.wlLAInk)
             } minimal: {
-                // Minimal: single element when multiple Live Activities exist
-                Image(systemName: "drop.fill")
-                    .foregroundStyle(context.state.isWarning ? .red : .blue)
+                Text(String(format: "%.0f", context.state.waterlineValue))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(context.state.isWarning ? Color.wlLAWarning : Color.wlLAInk)
             }
         }
     }
@@ -47,33 +52,44 @@ struct SessionLiveActivity: Widget {
         HStack(spacing: 16) {
             // Waterline value
             VStack(spacing: 2) {
-                Image(systemName: "drop.fill")
-                    .font(.title3)
-                    .foregroundStyle(context.state.isWarning ? .red : .blue)
+                Text("WATERLINE")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color.wlLASecondary)
                 Text(String(format: "%.1f", context.state.waterlineValue))
-                    .font(.system(.title2, design: .rounded).bold().monospacedDigit())
-                    .foregroundStyle(context.state.isWarning ? .red : .primary)
+                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+                    .foregroundStyle(context.state.isWarning ? Color.wlLAWarning : Color.wlLAInk)
             }
+
+            // Separator
+            Rectangle()
+                .fill(Color.wlLASecondary.opacity(0.3))
+                .frame(width: 1, height: 40)
 
             // Counts
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 12) {
-                    Label("\(context.state.drinkCount)", systemImage: "wineglass")
-                        .font(.subheadline.weight(.medium))
-                    Label("\(context.state.waterCount)", systemImage: "drop.fill")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.blue)
+                HStack(spacing: 8) {
+                    HStack(spacing: 4) {
+                        Text("\(context.state.drinkCount)")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        Text("DRINKS")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlLASecondary)
+                    }
+                    Text("/")
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
+                        .foregroundStyle(Color.wlLASecondary)
+                    HStack(spacing: 4) {
+                        Text("\(context.state.waterCount)")
+                            .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        Text("WATER")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Color.wlLASecondary)
+                    }
                 }
 
-                // Session duration
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Text(context.attributes.startTime, style: .relative)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text(context.attributes.startTime, style: .relative)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.wlLASecondary)
             }
 
             Spacer()
@@ -81,20 +97,20 @@ struct SessionLiveActivity: Widget {
             // Quick-add buttons
             VStack(spacing: 6) {
                 Button(intent: LogDrinkIntent()) {
-                    Image(systemName: "wineglass")
-                        .font(.caption.bold())
-                        .frame(width: 36, height: 28)
+                    Text("+ DRINK")
+                        .font(.system(size: 11, weight: .bold))
+                        .frame(width: 56, height: 28)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.orange)
+                .tint(Color.wlLAButton)
 
                 Button(intent: LogWaterIntent()) {
-                    Image(systemName: "drop.fill")
-                        .font(.caption.bold())
-                        .frame(width: 36, height: 28)
+                    Text("+ WATER")
+                        .font(.system(size: 11, weight: .bold))
+                        .frame(width: 56, height: 28)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .buttonStyle(.bordered)
+                .tint(Color.wlLAButton)
             }
         }
         .padding(16)
@@ -106,54 +122,51 @@ struct SessionLiveActivity: Widget {
     @ViewBuilder
     private func expandedLeading(context: ActivityViewContext<SessionActivityAttributes>) -> some View {
         VStack(spacing: 2) {
-            Image(systemName: "drop.fill")
-                .foregroundStyle(context.state.isWarning ? .red : .blue)
+            Text("WATERLINE")
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color.wlLASecondary)
             Text(String(format: "%.1f", context.state.waterlineValue))
-                .font(.system(.title3, design: .rounded).bold().monospacedDigit())
-                .foregroundStyle(context.state.isWarning ? .red : .primary)
+                .font(.system(.title3, design: .monospaced).bold())
+                .foregroundStyle(context.state.isWarning ? Color.wlLAWarning : Color.wlLAInk)
         }
     }
 
     @ViewBuilder
     private func expandedTrailing(context: ActivityViewContext<SessionActivityAttributes>) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
-            Label("\(context.state.drinkCount)", systemImage: "wineglass")
-                .font(.caption.weight(.medium))
-            Label("\(context.state.waterCount)", systemImage: "drop.fill")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.blue)
+            Text("\(context.state.drinkCount) DRINKS")
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+            Text("\(context.state.waterCount) WATER")
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.wlLASecondary)
         }
     }
 
     @ViewBuilder
     private func expandedCenter(context: ActivityViewContext<SessionActivityAttributes>) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "clock")
-                .font(.caption2)
-            Text(context.attributes.startTime, style: .relative)
-                .font(.caption)
-        }
-        .foregroundStyle(.secondary)
+        Text(context.attributes.startTime, style: .relative)
+            .font(.caption)
+            .foregroundStyle(Color.wlLASecondary)
     }
 
     @ViewBuilder
     private func expandedBottom() -> some View {
         HStack(spacing: 12) {
             Button(intent: LogDrinkIntent()) {
-                Label("Drink", systemImage: "plus")
-                    .font(.caption.weight(.semibold))
+                Text("+ Drink")
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(Color.wlLAButton)
 
             Button(intent: LogWaterIntent()) {
-                Label("Water", systemImage: "plus")
-                    .font(.caption.weight(.semibold))
+                Text("+ Water")
+                    .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .buttonStyle(.bordered)
+            .tint(Color.wlLAButton)
         }
     }
 }

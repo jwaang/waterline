@@ -44,7 +44,8 @@ export const createUser = mutation({
 
 export const upsertSession = mutation({
   args: {
-    userId: v.id("users"),
+    appleUserId: v.string(),
+    localId: v.string(),
     startTime: v.number(),
     endTime: v.optional(v.number()),
     isActive: v.boolean(),
@@ -58,33 +59,45 @@ export const upsertSession = mutation({
         finalWaterlineValue: v.number(),
       })
     ),
-    existingId: v.optional(v.id("sessions")),
   },
   handler: async (ctx, args) => {
-    const { existingId, ...data } = args;
+    // Resolve user by Apple ID
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+    if (!user) throw new Error("User not found");
 
-    if (existingId) {
-      await ctx.db.patch(existingId, {
-        endTime: data.endTime,
-        isActive: data.isActive,
-        computedSummary: data.computedSummary,
+    // Check for existing session by scanning user's sessions for matching startTime
+    const existingSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    const existing = existingSessions.find((s) => s.startTime === args.startTime);
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        endTime: args.endTime,
+        isActive: args.isActive,
+        computedSummary: args.computedSummary,
       });
-      return existingId;
+      return existing._id;
     }
 
     return await ctx.db.insert("sessions", {
-      userId: data.userId,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      isActive: data.isActive,
-      computedSummary: data.computedSummary,
+      userId: user._id,
+      startTime: args.startTime,
+      endTime: args.endTime,
+      isActive: args.isActive,
+      computedSummary: args.computedSummary,
     });
   },
 });
 
 export const addLogEntry = mutation({
   args: {
-    sessionId: v.id("sessions"),
+    appleUserId: v.string(),
+    sessionStartTime: v.number(),
     timestamp: v.number(),
     type: v.union(v.literal("alcohol"), v.literal("water")),
     alcoholMeta: v.optional(
@@ -114,7 +127,39 @@ export const addLogEntry = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("logEntries", args);
+    // Resolve user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+    if (!user) throw new Error("User not found");
+
+    // Find session by startTime
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    const session = sessions.find((s) => s.startTime === args.sessionStartTime);
+    if (!session) throw new Error("Session not found");
+
+    // Check for duplicate by timestamp + type
+    const existing = await ctx.db
+      .query("logEntries")
+      .withIndex("by_sessionId_timestamp", (q) =>
+        q.eq("sessionId", session._id).eq("timestamp", args.timestamp)
+      )
+      .collect();
+    const dupe = existing.find((e) => e.type === args.type);
+    if (dupe) return dupe._id;
+
+    return await ctx.db.insert("logEntries", {
+      sessionId: session._id,
+      timestamp: args.timestamp,
+      type: args.type,
+      alcoholMeta: args.alcoholMeta,
+      waterMeta: args.waterMeta,
+      source: args.source,
+    });
   },
 });
 
@@ -171,7 +216,7 @@ export const deleteUser = mutation({
 
 export const upsertDrinkPreset = mutation({
   args: {
-    userId: v.id("users"),
+    appleUserId: v.string(),
     name: v.string(),
     drinkType: v.union(
       v.literal("beer"),
@@ -182,22 +227,41 @@ export const upsertDrinkPreset = mutation({
     sizeOz: v.number(),
     abv: v.optional(v.number()),
     standardDrinkEstimate: v.number(),
-    existingId: v.optional(v.id("drinkPresets")),
+    localId: v.string(),
   },
   handler: async (ctx, args) => {
-    const { existingId, ...data } = args;
+    // Resolve user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_appleUserId", (q) => q.eq("appleUserId", args.appleUserId))
+      .unique();
+    if (!user) throw new Error("User not found");
 
-    if (existingId) {
-      await ctx.db.patch(existingId, {
-        name: data.name,
-        drinkType: data.drinkType,
-        sizeOz: data.sizeOz,
-        abv: data.abv,
-        standardDrinkEstimate: data.standardDrinkEstimate,
+    // Check for existing preset by name (dedup)
+    const existingPresets = await ctx.db
+      .query("drinkPresets")
+      .withIndex("by_userId", (q) => q.eq("userId", user._id))
+      .collect();
+    const existing = existingPresets.find((p) => p.name === args.name);
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        name: args.name,
+        drinkType: args.drinkType,
+        sizeOz: args.sizeOz,
+        abv: args.abv,
+        standardDrinkEstimate: args.standardDrinkEstimate,
       });
-      return existingId;
+      return existing._id;
     }
 
-    return await ctx.db.insert("drinkPresets", data);
+    return await ctx.db.insert("drinkPresets", {
+      userId: user._id,
+      name: args.name,
+      drinkType: args.drinkType,
+      sizeOz: args.sizeOz,
+      abv: args.abv,
+      standardDrinkEstimate: args.standardDrinkEstimate,
+    });
   },
 });

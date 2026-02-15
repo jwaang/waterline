@@ -16,18 +16,27 @@ struct SettingsView: View {
     private var user: User? { users.first }
     private var settings: UserSettings { user?.settings ?? UserSettings() }
 
-    private let intervalOptions = [10, 15, 20, 30, 45, 60]
+    private let reminderRange = 1...60
 
     var body: some View {
-        List {
-            remindersSection
-            waterlineSection
-            defaultsSection
-            presetsSection
-            accountSection
+        ScrollView {
+            VStack(spacing: 0) {
+                remindersSection
+                waterlineSection
+                defaultsSection
+                presetsSection
+                accountSection
+            }
         }
-        .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(Color.wlBase)
+        .wlScreen()
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text("SETTINGS")
+                    .font(.wlHeadline)
+                    .foregroundStyle(Color.wlInk)
+            }
+        }
         .onAppear {
             checkNotificationStatus()
         }
@@ -45,61 +54,66 @@ struct SettingsView: View {
     // MARK: - Reminders
 
     private var remindersSection: some View {
-        Section {
-            if !notificationsAuthorized {
-                HStack {
-                    Label("Notifications disabled", systemImage: "bell.slash")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-                        Button("Settings") {
-                            UIApplication.shared.open(settingsURL)
-                        }
-                        .font(.subheadline)
-                    }
-                }
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "REMINDERS")
 
-            Toggle("Time-based reminders", isOn: Binding(
-                get: { settings.timeRemindersEnabled },
-                set: { newValue in
-                    user?.settings.timeRemindersEnabled = newValue
-                    save()
-                }
-            ))
-
-            if settings.timeRemindersEnabled {
-                HStack {
-                    Text("Remind every")
-                    Spacer()
-                    Picker("Interval", selection: Binding(
-                        get: { settings.timeReminderIntervalMinutes },
-                        set: { newValue in
-                            user?.settings.timeReminderIntervalMinutes = newValue
-                            save()
-                        }
-                    )) {
-                        ForEach(intervalOptions, id: \.self) { minutes in
-                            Text("\(minutes) min").tag(minutes)
+            VStack(spacing: 16) {
+                if !notificationsAuthorized {
+                    HStack {
+                        Text("NOTIFICATIONS DISABLED")
+                            .wlTechnical()
+                            .foregroundStyle(Color.wlWarning)
+                        Spacer()
+                        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+                            Button("Settings") {
+                                UIApplication.shared.open(settingsURL)
+                            }
+                            .font(.wlTechnicalMono)
+                            .foregroundStyle(Color.wlInk)
                         }
                     }
-                    .pickerStyle(.menu)
                 }
-            }
 
-            Toggle("Discreet notifications", isOn: Binding(
-                get: { settings.discreetNotifications },
-                set: { newValue in
-                    user?.settings.discreetNotifications = newValue
-                    save()
+                WLToggle(label: "Time-based reminders", isOn: Binding(
+                    get: { settings.timeRemindersEnabled },
+                    set: { newValue in
+                        user?.settings.timeRemindersEnabled = newValue
+                        save()
+                    }
+                ))
+
+                if settings.timeRemindersEnabled {
+                    WLStepper(
+                        label: "Remind every",
+                        value: Binding(
+                            get: { settings.timeReminderIntervalMinutes },
+                            set: { newValue in
+                                user?.settings.timeReminderIntervalMinutes = newValue
+                                save()
+                            }
+                        ),
+                        range: reminderRange,
+                        step: 5,
+                        displaySuffix: " min",
+                        snapStops: [1, 5]
+                    )
                 }
-            ))
 
-            HStack {
-                Text("Water every")
-                Spacer()
-                Stepper(
-                    "\(settings.waterEveryNDrinks) drink\(settings.waterEveryNDrinks == 1 ? "" : "s")",
+                WLToggle(label: "Discreet notifications", isOn: Binding(
+                    get: { settings.discreetNotifications },
+                    set: { newValue in
+                        user?.settings.discreetNotifications = newValue
+                        save()
+                    }
+                ))
+
+                Text("Hides specific drink counts in notifications")
+                    .font(.caption)
+                    .foregroundStyle(Color.wlSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                WLStepper(
+                    label: "Water every",
                     value: Binding(
                         get: { settings.waterEveryNDrinks },
                         set: { newValue in
@@ -107,26 +121,24 @@ struct SettingsView: View {
                             save()
                         }
                     ),
-                    in: 1...10
+                    range: 1...10,
+                    displaySuffix: settings.waterEveryNDrinks == 1 ? " drink" : " drinks"
                 )
             }
-        } header: {
-            Text("Reminders")
-        } footer: {
-            Text("Hide drink counts from notification previews")
+            .padding(WLSpacing.sectionPadding)
         }
-        .animation(.easeInOut(duration: 0.2), value: settings.timeRemindersEnabled)
+        .animation(.easeInOut(duration: 0.15), value: settings.timeRemindersEnabled)
     }
 
     // MARK: - Waterline
 
     private var waterlineSection: some View {
-        Section {
-            HStack {
-                Text("Warning threshold")
-                Spacer()
-                Stepper(
-                    "\(settings.warningThreshold)",
+        VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "WATERLINE")
+
+            VStack(spacing: 16) {
+                WLStepper(
+                    label: "Warning threshold",
                     value: Binding(
                         get: { settings.warningThreshold },
                         set: { newValue in
@@ -134,23 +146,22 @@ struct SettingsView: View {
                             save()
                         }
                     ),
-                    in: 1...10
+                    range: 1...10
                 )
             }
-        } header: {
-            Text("Waterline")
+            .padding(WLSpacing.sectionPadding)
         }
     }
 
     // MARK: - Defaults
 
     private var defaultsSection: some View {
-        Section {
-            HStack {
-                Text("Default water amount")
-                Spacer()
-                Stepper(
-                    "\(settings.defaultWaterAmountOz) \(settings.units.rawValue)",
+        VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "DEFAULTS")
+
+            VStack(spacing: 16) {
+                WLStepper(
+                    label: "Default water amount",
                     value: Binding(
                         get: { settings.defaultWaterAmountOz },
                         set: { newValue in
@@ -158,74 +169,76 @@ struct SettingsView: View {
                             save()
                         }
                     ),
-                    in: 1...32
+                    range: 1...32,
+                    displaySuffix: " oz"
                 )
             }
-
-            Picker("Units", selection: Binding(
-                get: { settings.units },
-                set: { newValue in
-                    user?.settings.units = newValue
-                    save()
-                }
-            )) {
-                Text("oz").tag(VolumeUnit.oz)
-                Text("ml").tag(VolumeUnit.ml)
-            }
-            .pickerStyle(.segmented)
-        } header: {
-            Text("Defaults")
+            .padding(WLSpacing.sectionPadding)
         }
     }
 
     // MARK: - Presets
 
     private var presetsSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "PRESETS")
+
             NavigationLink {
                 PresetsListView()
             } label: {
                 HStack {
                     Text("Manage Quick Drinks")
+                        .font(.wlBody)
+                        .foregroundStyle(Color.wlInk)
                     Spacer()
                     Text("\(user?.presets.count ?? 0)")
-                        .foregroundStyle(.secondary)
+                        .font(.wlTechnicalMono)
+                        .foregroundStyle(Color.wlSecondary)
+                    Text(">>")
+                        .font(.wlTechnicalMono)
+                        .foregroundStyle(Color.wlTertiary)
                 }
+                .padding(WLSpacing.sectionPadding)
             }
-        } header: {
-            Text("Presets")
         }
     }
 
     // MARK: - Account
 
     private var accountSection: some View {
-        Section {
-            Button("Sign Out") {
-                showSignOutConfirmation = true
+        VStack(alignment: .leading, spacing: 0) {
+            WLSectionHeader(title: "ACCOUNT")
+
+            VStack(spacing: 12) {
+                WLActionBlock(label: "Sign Out", style: .secondary) {
+                    showSignOutConfirmation = true
+                }
+
+                Button {
+                    showDeleteConfirmation = true
+                } label: {
+                    Text("Delete Account")
+                        .font(.wlControl)
+                        .foregroundStyle(Color.wlWarning)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
             }
-            .confirmationDialog("Sign out?", isPresented: $showSignOutConfirmation, titleVisibility: .visible) {
+            .padding(WLSpacing.sectionPadding)
+            .alert("Sign out?", isPresented: $showSignOutConfirmation) {
                 Button("Sign Out", role: .destructive) {
                     authManager.signOut()
                 }
+                Button("Cancel", role: .cancel) {}
             }
-
-            Button("Delete Account", role: .destructive) {
-                showDeleteConfirmation = true
-            }
-            .confirmationDialog(
-                "Delete your account?",
-                isPresented: $showDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
+            .alert("Delete your account?", isPresented: $showDeleteConfirmation) {
                 Button("Delete Account", role: .destructive) {
                     deleteAccount()
                 }
+                Button("Cancel", role: .cancel) {}
             } message: {
                 Text("This will permanently remove all your data. This action cannot be undone.")
             }
-        } header: {
-            Text("Account")
         }
     }
 
@@ -237,7 +250,6 @@ struct SettingsView: View {
     }
 
     private func deleteAccount() {
-        // Capture apple user ID before deleting local data
         let appleUserId = user?.appleUserId
 
         let presetDescriptor = FetchDescriptor<DrinkPreset>()
@@ -264,7 +276,6 @@ struct SettingsView: View {
 
         ReminderService.cancelAllTimeReminders()
 
-        // Delete from Convex (best-effort, non-blocking)
         if let appleUserId {
             Task {
                 await syncService.deleteRemoteAccount(appleUserId: appleUserId)

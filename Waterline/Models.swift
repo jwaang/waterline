@@ -188,3 +188,77 @@ final class DrinkPreset {
         self.needsSync = needsSync
     }
 }
+
+// MARK: - Shared Model Container
+
+enum SharedModelContainer {
+    static let appGroupID = "group.com.waterline.app.shared"
+    static func create() throws -> ModelContainer {
+        if let groupURL = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID) {
+            let url = groupURL.appending(path: "Waterline.store")
+            let config = ModelConfiguration(url: url)
+            return try ModelContainer(
+                for: User.self, Session.self, LogEntry.self, DrinkPreset.self,
+                configurations: config
+            )
+        }
+        // Fallback: App Group not available (entitlement not provisioned yet)
+        return try ModelContainer(
+            for: User.self, Session.self, LogEntry.self, DrinkPreset.self
+        )
+    }
+}
+
+// MARK: - Live Activity Bridge (cross-process IPC via Darwin notifications)
+
+enum LiveActivityBridge {
+    private static nonisolated(unsafe) let darwinName = "com.waterline.app.liveActivityUpdate" as CFString
+    private static let stateKey = "liveActivityPendingState"
+
+    private static nonisolated(unsafe) var handler: (@Sendable () -> Void)?
+
+    /// Called from intents: write new state to App Group UserDefaults and notify main app.
+    static func postUpdate(waterlineValue: Double, drinkCount: Int, waterCount: Int, isWarning: Bool) {
+        let defaults = UserDefaults(suiteName: SharedModelContainer.appGroupID)
+        defaults?.set([
+            "wl": waterlineValue,
+            "drinks": drinkCount,
+            "water": waterCount,
+            "warning": isWarning,
+        ], forKey: stateKey)
+        defaults?.synchronize()
+
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(darwinName),
+            nil, nil, true
+        )
+    }
+
+    /// Called from main app: read pending state written by an intent.
+    static func readPendingState() -> (waterlineValue: Double, drinkCount: Int, waterCount: Int, isWarning: Bool)? {
+        let defaults = UserDefaults(suiteName: SharedModelContainer.appGroupID)
+        guard let dict = defaults?.dictionary(forKey: stateKey),
+              let wl = dict["wl"] as? Double,
+              let drinks = dict["drinks"] as? Int,
+              let water = dict["water"] as? Int,
+              let warning = dict["warning"] as? Bool else { return nil }
+        return (wl, drinks, water, warning)
+    }
+
+    /// Called once from main app init: register Darwin notification observer.
+    static func startObserving(onUpdate: @escaping @Sendable () -> Void) {
+        handler = onUpdate
+        CFNotificationCenterAddObserver(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            nil,
+            { _, _, _, _, _ in
+                LiveActivityBridge.handler?()
+            },
+            darwinName,
+            nil,
+            .deliverImmediately
+        )
+    }
+}

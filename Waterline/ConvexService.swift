@@ -72,32 +72,29 @@ actor ConvexService {
     // MARK: - Sessions
 
     func upsertSession(
-        userId: String,
+        appleUserId: String,
+        localId: String,
         startTime: Double,
         endTime: Double? = nil,
         isActive: Bool,
-        computedSummary: ConvexSessionSummary? = nil,
-        existingId: String? = nil
+        computedSummary: ConvexSessionSummary? = nil
     ) async throws -> String {
         var args: [String: Any] = [
-            "userId": userId,
+            "appleUserId": appleUserId,
+            "localId": localId,
             "startTime": startTime,
             "isActive": isActive,
         ]
         if let endTime { args["endTime"] = endTime }
         if let computedSummary { args["computedSummary"] = computedSummary.toDictionary() }
-        if let existingId { args["existingId"] = existingId }
         return try await mutation("mutations:upsertSession", args: args)
-    }
-
-    func getActiveSession(userId: String) async throws -> ConvexSession? {
-        return try await query("queries:getActiveSession", args: ["userId": userId])
     }
 
     // MARK: - Log Entries
 
     func addLogEntry(
-        sessionId: String,
+        appleUserId: String,
+        sessionStartTime: Double,
         timestamp: Double,
         type: String,
         alcoholMeta: ConvexAlcoholMeta? = nil,
@@ -105,7 +102,8 @@ actor ConvexService {
         source: String
     ) async throws -> String {
         var args: [String: Any] = [
-            "sessionId": sessionId,
+            "appleUserId": appleUserId,
+            "sessionStartTime": sessionStartTime,
             "timestamp": timestamp,
             "type": type,
             "source": source,
@@ -119,35 +117,27 @@ actor ConvexService {
         try await mutationVoid("mutations:deleteLogEntry", args: ["id": id])
     }
 
-    func getSessionLogs(sessionId: String) async throws -> [ConvexLogEntry] {
-        return try await query("queries:getSessionLogs", args: ["sessionId": sessionId])
-    }
-
     // MARK: - Drink Presets
 
     func upsertDrinkPreset(
-        userId: String,
+        appleUserId: String,
         name: String,
         drinkType: String,
         sizeOz: Double,
         abv: Double? = nil,
         standardDrinkEstimate: Double,
-        existingId: String? = nil
+        localId: String
     ) async throws -> String {
         var args: [String: Any] = [
-            "userId": userId,
+            "appleUserId": appleUserId,
             "name": name,
             "drinkType": drinkType,
             "sizeOz": sizeOz,
             "standardDrinkEstimate": standardDrinkEstimate,
+            "localId": localId,
         ]
         if let abv { args["abv"] = abv }
-        if let existingId { args["existingId"] = existingId }
         return try await mutation("mutations:upsertDrinkPreset", args: args)
-    }
-
-    func getUserPresets(userId: String) async throws -> [ConvexDrinkPreset] {
-        return try await query("queries:getUserPresets", args: ["userId": userId])
     }
 
     // MARK: - Internal
@@ -286,15 +276,6 @@ struct ConvexSessionSummary: Codable {
     }
 }
 
-struct ConvexSession: Decodable {
-    let _id: String
-    let userId: String
-    let startTime: Double
-    let endTime: Double?
-    let isActive: Bool
-    let computedSummary: ConvexSessionSummary?
-}
-
 struct ConvexAlcoholMeta: Codable {
     let drinkType: String
     let sizeOz: Double
@@ -320,24 +301,4 @@ struct ConvexWaterMeta: Codable {
     func toDictionary() -> [String: Any] {
         return ["amountOz": amountOz]
     }
-}
-
-struct ConvexLogEntry: Decodable {
-    let _id: String
-    let sessionId: String
-    let timestamp: Double
-    let type: String
-    let alcoholMeta: ConvexAlcoholMeta?
-    let waterMeta: ConvexWaterMeta?
-    let source: String
-}
-
-struct ConvexDrinkPreset: Decodable {
-    let _id: String
-    let userId: String
-    let name: String
-    let drinkType: String
-    let sizeOz: Double
-    let abv: Double?
-    let standardDrinkEstimate: Double
 }

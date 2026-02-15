@@ -16,7 +16,7 @@ struct ConfigureDefaultsView: View {
     @State private var units: VolumeUnit = .oz
     @State private var showNotificationExplanation = false
 
-    private let intervalOptions = [10, 15, 20, 30, 45, 60]
+    private let reminderRange = 5...60
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,16 +24,11 @@ struct ConfigureDefaultsView: View {
                 VStack(spacing: 32) {
                     // Header
                     VStack(spacing: 8) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 48, weight: .light))
-                            .foregroundStyle(.blue.opacity(0.8))
-
-                        Text("Set Your Pace")
-                            .font(.title2.bold())
+                        WLSectionHeader(title: "CONFIGURE PROTOCOL")
 
                         Text("Configure how Waterline reminds you to drink water.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .font(.wlBody)
+                            .foregroundStyle(Color.wlSecondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                     }
@@ -46,116 +41,106 @@ struct ConfigureDefaultsView: View {
                         warningSection
                         unitsSection
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, WLSpacing.screenMargin)
                 }
             }
 
             // Done button
-            Button(action: saveAndComplete) {
-                Text("Done")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 40)
-            .padding(.bottom, 48)
-            .padding(.top, 16)
+            WLActionBlock(label: "Confirm", action: saveAndComplete)
+                .padding(.horizontal, 40)
+                .padding(.bottom, 48)
+                .padding(.top, 16)
         }
+        .background(Color.wlBase)
         .sheet(isPresented: $showNotificationExplanation) {
             NotificationPermissionView {
                 showNotificationExplanation = false
                 completeOnboarding()
             }
             .presentationDetents([.medium])
+            .presentationCornerRadius(0)
         }
     }
 
     // MARK: - Sections
 
     private var waterFrequencySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Water Frequency")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("WATER FREQUENCY")
+                .wlTechnical()
 
-            HStack {
-                Text("Drink water every")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper(
-                    "\(waterEveryNDrinks) drink\(waterEveryNDrinks == 1 ? "" : "s")",
-                    value: $waterEveryNDrinks,
-                    in: 1...10
-                )
-            }
+            WLStepper(
+                label: "Drink water every",
+                value: $waterEveryNDrinks,
+                range: 1...10,
+                displaySuffix: waterEveryNDrinks == 1 ? " drink" : " drinks"
+            )
         }
-        .padding(16)
-        .background(.fill.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(WLSpacing.sectionPadding)
+        .overlay(
+            Rectangle()
+                .strokeBorder(Color.wlTertiary, lineWidth: 1)
+        )
     }
 
     private var timeReminderSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Time Reminders")
-                .font(.headline)
+            Text("TIME REMINDERS")
+                .wlTechnical()
 
-            Toggle("Enable time-based reminders", isOn: $timeRemindersEnabled)
+            WLToggle(label: "Enable time-based reminders", isOn: $timeRemindersEnabled)
 
             if timeRemindersEnabled {
-                HStack {
-                    Text("Remind every")
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Picker("Interval", selection: $timeReminderIntervalMinutes) {
-                        ForEach(intervalOptions, id: \.self) { minutes in
-                            Text("\(minutes) min").tag(minutes)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                }
-            }
-        }
-        .padding(16)
-        .background(.fill.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .animation(.easeInOut(duration: 0.2), value: timeRemindersEnabled)
-    }
-
-    private var warningSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Warning Threshold")
-                .font(.headline)
-
-            HStack {
-                Text("Warn when Waterline reaches")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Stepper(
-                    "\(warningThreshold)",
-                    value: $warningThreshold,
-                    in: 1...10
+                WLStepper(
+                    label: "Remind every",
+                    value: $timeReminderIntervalMinutes,
+                    range: reminderRange,
+                    step: 5,
+                    displaySuffix: " min"
                 )
             }
         }
-        .padding(16)
-        .background(.fill.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(WLSpacing.sectionPadding)
+        .overlay(
+            Rectangle()
+                .strokeBorder(Color.wlTertiary, lineWidth: 1)
+        )
+        .animation(.easeInOut(duration: 0.15), value: timeRemindersEnabled)
+    }
+
+    private var warningSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("WARNING THRESHOLD")
+                .wlTechnical()
+
+            WLStepper(
+                label: "Warn when Waterline reaches",
+                value: $warningThreshold,
+                range: 1...10
+            )
+        }
+        .padding(WLSpacing.sectionPadding)
+        .overlay(
+            Rectangle()
+                .strokeBorder(Color.wlTertiary, lineWidth: 1)
+        )
     }
 
     private var unitsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Units")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("UNITS")
+                .wlTechnical()
 
-            Picker("Volume units", selection: $units) {
-                Text("oz").tag(VolumeUnit.oz)
-                Text("ml").tag(VolumeUnit.ml)
-            }
-            .pickerStyle(.segmented)
+            WLSegmentedPicker(
+                options: [("OZ", VolumeUnit.oz), ("ML", VolumeUnit.ml)],
+                selection: $units
+            )
         }
-        .padding(16)
-        .background(.fill.quaternary)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(WLSpacing.sectionPadding)
+        .overlay(
+            Rectangle()
+                .strokeBorder(Color.wlTertiary, lineWidth: 1)
+        )
     }
 
     // MARK: - Actions
@@ -195,7 +180,6 @@ struct ConfigureDefaultsView: View {
         )
         guard let user = try? modelContext.fetch(descriptor).first else { return }
 
-        // Skip if user already has presets (e.g. restored from Convex sync)
         if !user.presets.isEmpty { return }
 
         let defaults: [(String, DrinkType, Double, Double)] = [
@@ -230,17 +214,17 @@ struct NotificationPermissionView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "bell.badge")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(.blue.opacity(0.8))
+            Text("NOTIFICATIONS")
+                .wlTechnical()
 
             VStack(spacing: 12) {
                 Text("Stay on Track")
-                    .font(.title3.bold())
+                    .font(.wlHeadline)
+                    .foregroundStyle(Color.wlInk)
 
                 Text("Waterline sends gentle reminders to drink water during your session. Allow notifications to get pacing nudges.")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
+                    .font(.wlBody)
+                    .foregroundStyle(Color.wlSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
@@ -248,23 +232,18 @@ struct NotificationPermissionView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                Button(action: requestNotifications) {
-                    Text("Enable Notifications")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                }
-                .buttonStyle(.borderedProminent)
+                WLActionBlock(label: "Enable Notifications", action: requestNotifications)
 
                 Button(action: onDismiss) {
                     Text("Skip")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.wlBody)
+                        .foregroundStyle(Color.wlSecondary)
                 }
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 48)
         }
+        .background(Color.wlBase)
     }
 
     private func requestNotifications() {

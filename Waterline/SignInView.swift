@@ -10,23 +10,19 @@ struct SignInView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            Image(systemName: "drop.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.blue)
-
             VStack(spacing: 8) {
-                Text("Waterline")
-                    .font(.largeTitle.bold())
-                Text("Pace your drinking. Stay balanced.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text("WATERLINE")
+                    .font(.wlDisplayLarge)
+                    .foregroundStyle(Color.wlInk)
+
+                Text("PACING INSTRUMENT")
+                    .wlTechnical()
             }
 
             Spacer()
 
             if authManager.isLoading {
-                ProgressView()
-                    .controlSize(.large)
+                WLStatusFlag("AUTHENTICATING")
             } else {
                 SignInWithAppleButton(.signIn) { request in
                     request.requestedScopes = [.fullName, .email]
@@ -35,13 +31,22 @@ struct SignInView: View {
                 }
                 .signInWithAppleButtonStyle(.black)
                 .frame(height: 50)
-                .cornerRadius(10)
+                .clipShape(Rectangle())
                 .padding(.horizontal, 40)
             }
+
+            #if DEBUG
+            Button("Dev Sign In (Skip Apple)") {
+                authManager.devSignIn(modelContext: modelContext)
+            }
+            .font(.wlTechnicalMono)
+            .foregroundStyle(Color.wlSecondary)
+            #endif
 
             Spacer()
                 .frame(height: 48)
         }
+        .background(Color.wlBase)
         .alert("Sign In Error", isPresented: .init(
             get: { authManager.errorMessage != nil },
             set: { if !$0 { authManager.dismissError() } }

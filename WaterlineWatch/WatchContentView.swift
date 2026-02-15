@@ -1,5 +1,19 @@
 import SwiftUI
 
+// MARK: - Watch Design Tokens
+
+private extension Color {
+    static let wlInk = Color.white
+    static let wlSecondary = Color.secondary
+    static let wlWarning = Color(red: 0.75, green: 0.22, blue: 0.17)
+}
+
+private extension Font {
+    static let wlWatchNumeral: Font = .system(size: 20, weight: .bold, design: .monospaced)
+    static let wlWatchTechnical: Font = .system(size: 10, weight: .medium)
+    static let wlWatchBody: Font = .system(size: 15, weight: .regular)
+}
+
 struct WatchContentView: View {
     @ObservedObject var sessionManager: WatchSessionManager
     @State private var showingDrinkPicker = false
@@ -32,41 +46,41 @@ struct WatchContentView: View {
     private var activeSessionView: some View {
         ScrollView {
             VStack(spacing: 12) {
-                // Compact waterline indicator
                 waterlineGauge
 
-                // Counts
                 HStack(spacing: 16) {
                     VStack(spacing: 2) {
                         Text("\(sessionManager.drinkCount)")
-                            .font(.title3.bold())
-                        Text("Drinks")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.wlWatchNumeral)
+                        Text("DRINKS")
+                            .font(.wlWatchTechnical)
+                            .foregroundStyle(Color.wlSecondary)
                     }
                     VStack(spacing: 2) {
                         Text("\(sessionManager.waterCount)")
-                            .font(.title3.bold())
-                        Text("Water")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .font(.wlWatchNumeral)
+                        Text("WATER")
+                            .font(.wlWatchTechnical)
+                            .foregroundStyle(Color.wlSecondary)
                     }
                 }
 
-                // Quick-add buttons
                 quickAddButtons
 
-                Divider()
+                Rectangle()
+                    .fill(Color.wlSecondary.opacity(0.3))
+                    .frame(height: 1)
 
-                // End session
                 Button(role: .destructive) {
                     showingEndConfirmation = true
                 } label: {
-                    Label("End Session", systemImage: "stop.fill")
+                    Text("End Session")
                         .font(.footnote)
+                        .foregroundStyle(Color.wlWarning)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .tint(Color.wlWarning)
             }
         }
         .confirmationDialog("End this session?", isPresented: $showingEndConfirmation, titleVisibility: .visible) {
@@ -84,16 +98,19 @@ struct WatchContentView: View {
         let value = sessionManager.waterlineValue
         let clamped = min(max(value, -5), 5)
         let normalizedFraction = clamped / 5.0
+        let isWarning = value >= 2
 
         return VStack(spacing: 4) {
             Gauge(value: normalizedFraction, in: -1...1) {
                 Text("WL")
+                    .font(.wlWatchTechnical)
             } currentValueLabel: {
                 Text(String(format: "%.1f", value))
-                    .font(.caption.monospacedDigit())
+                    .font(.caption.monospacedDigit().bold())
+                    .foregroundStyle(isWarning ? Color.wlWarning : Color.wlInk)
             }
             .gaugeStyle(.accessoryCircular)
-            .tint(value >= 2 ? .red : (value > 0 ? .orange : .blue))
+            .tint(isWarning ? Color.wlWarning : Color.wlInk)
         }
     }
 
@@ -104,22 +121,23 @@ struct WatchContentView: View {
             Button {
                 showingDrinkPicker = true
             } label: {
-                Label("Drink", systemImage: "wineglass")
+                Text("+ Drink")
                     .font(.headline)
+                    .foregroundStyle(Color.black)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(Color.wlInk)
 
             Button {
                 sessionManager.sendLogWaterCommand()
             } label: {
-                Label("Water", systemImage: "drop.fill")
+                Text("+ Water")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(.blue)
+            .buttonStyle(.bordered)
+            .tint(Color.wlInk)
         }
     }
 
@@ -129,7 +147,6 @@ struct WatchContentView: View {
         NavigationStack {
             List {
                 if sessionManager.presets.isEmpty {
-                    // Default quick options when no presets synced
                     defaultDrinkOptions
                 } else {
                     ForEach(sessionManager.presets) { preset in
@@ -139,11 +156,11 @@ struct WatchContentView: View {
                         } label: {
                             HStack {
                                 Text(preset.name)
-                                    .font(.body)
+                                    .font(.wlWatchBody)
                                 Spacer()
                                 Text("\(preset.standardDrinkEstimate, specifier: "%.1f") std")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .font(.wlWatchTechnical)
+                                    .foregroundStyle(Color.wlSecondary)
                             }
                         }
                     }
@@ -174,11 +191,11 @@ struct WatchContentView: View {
             } label: {
                 HStack {
                     Text(name)
-                        .font(.body)
+                        .font(.wlWatchBody)
                     Spacer()
                     Text("\(estimate, specifier: "%.1f") std")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.wlWatchTechnical)
+                        .foregroundStyle(Color.wlSecondary)
                 }
             }
         }
@@ -188,24 +205,20 @@ struct WatchContentView: View {
 
     private var noSessionView: some View {
         VStack(spacing: 12) {
-            Image(systemName: "drop.fill")
-                .font(.largeTitle)
-                .foregroundStyle(.tint)
-            Text("Waterline")
-                .font(.headline)
-            Text("No active session")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text("WATERLINE")
+                .font(.system(size: 16, weight: .bold))
+                .tracking(2)
 
             Button {
                 sessionManager.sendStartSessionCommand()
             } label: {
-                Label("Start Session", systemImage: "play.fill")
+                Text("Start Session")
                     .font(.headline)
+                    .foregroundStyle(Color.black)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.green)
+            .tint(Color.wlInk)
         }
     }
 }
@@ -220,9 +233,10 @@ struct WaterReminderSheet: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Image(systemName: "drop.fill")
-                    .font(.title)
-                    .foregroundStyle(.blue)
+                Text("REMINDER")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .tracking(1)
 
                 Text(reminder.title)
                     .font(.headline)
@@ -236,11 +250,11 @@ struct WaterReminderSheet: View {
                 Button {
                     onLogWater()
                 } label: {
-                    Label("Log Water", systemImage: "drop.fill")
+                    Text("+ Water")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(.blue)
+                .tint(.primary)
 
                 Button("Dismiss", role: .cancel) {
                     onDismiss()
